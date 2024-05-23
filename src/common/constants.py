@@ -1,3 +1,7 @@
 
 
 RAW_DATA_DIRECTORY = 'raw_data'
+
+PC2LY = '3.261598'
+
+DEG_2_RAD = 3.14159/180.0

@@ -1,6 +1,7 @@
 # calculations v.2
 # created by Zack Reeves
 # Sept 30, 2023
+# Updated Nov 19, 2023
 
 # Calculations necessary in processing data for the Digital Universe
 
@@ -10,15 +11,28 @@
 
 # get_cartesian() - takes an Astropy Table and adds calculated columns for XYZ and UVW if given proper motions and radial velocity
 
+#get_photometric_distance() - takes stellar effective temperature, radius, and Kepler magnitude to calculate a distance using astronomical equations
+
 # get_num_nearby() - takes an Astropy Table and calculates the number of objects within the table that are within a specified 
 #                    distance to each object
 
+#get_redshift_distance() - calculates the lookback and comoving distances of objects in a table given redshifts
+
 import pandas as pd
+import numpy as np
+
+from scipy.spatial import cKDTree
+
 from astropy.table import Table
 import astropy.coordinates
 import astropy.units as u
-import numpy as np
+from astropy import constants as const
+import astropy.cosmology.units as cu
+from astropy.cosmology import WMAP9
+
 import collections
+
+from tqdm import tqdm
 
 # takes a distance held in 'data' and converts it to distances in parsecs and light years
 # If both a parallax and a distance exist in the data, the parallax is used by default.  If distance is preferred, change the 'use' argument to 'distance'
@@ -49,11 +63,14 @@ def get_distance(data:Table, parallax = 'Plx', dist='Dist', use='parallax'):
 
 # transforms a given set of coordinates in a pandas df (RA/DEC, L/B) to Cartesian XYZ
 # if given proper motions and radial velocities, also returns UVW and speed
-def get_cartesian(data:Table, frame='icrs', dist='dist_pc', ra='RAdeg', dec='DEdeg', glon='GLON', glat='GLAT', pmra='pmra', pmde='pmde', pmglon='pmglon', pmglat='pmglat', radial_velocity='radial_velocity'):
+def get_cartesian(data:Table, frame='icrs', dist='dist_pc', ra='RAdeg', dec='DEdeg', glon='GLON', glat='GLAT', pmra='pmra', pmde='pmde', pmglon='pmglon', pmglat='pmglat', radial_velocity='radial_velocity', epoch='J2000'):
     
     #Raise exception if distance is not in data
     if(dist not in data.columns):
         raise Exception('distance must be provided')
+        
+    #setting the units based on the distance
+    dist_unit = str(data[dist].unit)
     
     #We use the calculate_velocities indicator to inform the code whether or not proper motions and radial velocities have been provided.  It is defined as False unless pmra, pmde, and radial_velocity have been called
     calculate_velocities = False
@@ -117,6 +134,7 @@ def get_cartesian(data:Table, frame='icrs', dist='dist_pc', ra='RAdeg', dec='DEd
             pm_dec=pmde,
             radial_velocity=radial_velocity,
             frame='icrs'
+            #obstime=epoch
             )
     
         #calculate galactic positions and proper motions
@@ -144,17 +162,17 @@ def get_cartesian(data:Table, frame='icrs', dist='dist_pc', ra='RAdeg', dec='DEd
     data['x'] = data.MaskedColumn(data=galactic_coords.cartesian.x, 
                             meta = collections.OrderedDict([('ucd', 'pos.cartesian.x')]),
                             format='{:.6f}', 
-                            description='Position (x coordinate) in parsecs')
+                            description='Position (x coordinate) in '+dist_unit)
     
     data['y'] = data.MaskedColumn(data=galactic_coords.cartesian.y, 
                             meta = collections.OrderedDict([('ucd', 'pos.cartesian.y')]),
                             format='{:.6f}', 
-                            description='Position (y coordinate) in parsecs')
+                            description='Position (y coordinate) in '+dist_unit)
     
     data['z'] = data.MaskedColumn(data=galactic_coords.cartesian.z, 
                             meta = collections.OrderedDict([('ucd', 'pos.cartesian.z')]),
                             format='{:.6f}', 
-                            description='Position (z coordinate) in parsecs')
+                            description='Position (z coordinate) in '+dist_unit)
     
     
     #if proper motions and rv was given, calculate UVW velocities and speed and set metadata
@@ -178,17 +196,79 @@ def get_cartesian(data:Table, frame='icrs', dist='dist_pc', ra='RAdeg', dec='DEd
         data['speed'] = data.MaskedColumn(data=[np.sqrt(data['u'][i]**2 + data['v'][i]**2 + data['w'][i]**2) for i in range(len(data))], 
                                     meta = collections.OrderedDict([('ucd', 'vel.speed')]), format='{:.6f}', 
                                     description='Total heliocentric velocity')
+        
+        
+# Calculates photometric distance given stellar teff, radius, and apparent magnitude
+# magnitude is assumed to be in the Kepler band
+# Rstar is assumed to be in units of R_sun
+def get_photometric_distance(Teff, Rstar, KEPmag):
+    
+    
+    #calculate stellar luminosity in Watts
+    Lstar = 4.0 * np.pi * Rstar**2 * const.R_sun.value**2 * const.sigma_sb.value * Teff**4.0
+    
+    #calculate absolute magnitude of star
+    Mstar = 4.75 - 2.5 * np.log(Lstar/const.L_sun.value)/np.log(10.0)
+    
+    #calculate and return distance in parsecs
+    dist_pc = 10.0**((KEPmag - Mstar + 5.0) / 5.0)*u.pc
+    return dist_pc
 
-#calculates the number of nearby objects for each object in an Astropy Table
-#XYZ must already be calculated and be labeled as 'x', 'y', 'z'
-def get_num_nearby(data:Table, distfactor:float):
-    distfactor=10 # distance factor in parsecs
-    n_near = [len(data[np.sqrt((data['x']-data['x'][i])**2 + (data['y']-data['y'][i])**2 + 
-                                       (data['z']-data['z'][i])**2) < distfactor]) for i in range(len(data))]
-    data['N_near'] = data.MaskedColumn(data=n_near,
-                                       dtype=int,
-                                       meta = collections.OrderedDict([('ucd', 'meta.number')]),
-                                       description='Number of objects in the table within '+str(distfactor)+' parsecs)
+# Calculates the number of nearby objects for each object in an Astropy Table
+# Assumes Astropy table data has columns x, y, and z calculated and accordingly named
+# Distance factor should be in same units as XYZ and distance
+def get_num_nearby(data:Table, distance_factor:float, dist='comoving_distance'):
+    #Thank you ChatGPT <3
+
+    #Create dataframe with data
+    df = Table.to_pandas(data)
+
+    # Extract the cartesian coordinates and distances
+    coordinates = df[['x', 'y', 'z']].values
+    distances = df['comoving_distance'].values
+
+    # Build a KD-tree for efficient spatial queries
+    kdtree = cKDTree(coordinates)
+
+    # For each galaxy, query the KD-tree to find neighbors within the distance factor
+    num_nearby_galaxies = []
+    for i in tqdm(range(len(coordinates)), desc='Processing', position=0, leave=True):
+        nearby_indices = kdtree.query_ball_point(coordinates[i], distance_factor)
+        # Exclude the galaxy itself
+        num_nearby = len(nearby_indices) - 1
+        num_nearby_galaxies.append(num_nearby)
+
+    # Add the results as a new column to your DataFrame
+    data['num_nearby_galaxies'] = data.Column(data=num_nearby_galaxies,
+                                              meta=collections.OrderedDict([('ucd', 'meta.number')]),
+                                              description='Number of nearby galaxies') #amend to add number of parsecs considered
+
+
+#calculates the lookback and comoving distances of objects in a table given redshifts
+def get_redshift_distance(data:Table, redshift='z'):
+    #raise exception if redshift is not in data - could also mean that redshift is named differently
+    if(redshift not in data.columns):
+        raise Exception('redshift must exist in data')
+    
+    #calculating lookback and comoving distances
+    lookback = data[redshift].to(u.lyr, cu.redshift_distance(WMAP9, kind="lookback"))
+    comoving = data[redshift].to(u.Mpc, cu.redshift_distance(WMAP9, kind="comoving"))
+    
+    #calculating lookback time in Gyrs
+    lookback_time = lookback.value / 10**9
+    
+    #setting columns and metadata
+    data['lookback_time'] = data.MaskedColumn(data=lookback_time,
+                                              unit=u.Gyr,
+                                              meta = collections.OrderedDict([('ucd', 'time.lookback')]),
+                                              format='{:.6f}', 
+                                              description='Redshift-based lookback time')
+    data['comoving_distance'] = data.MaskedColumn(data=comoving,
+                                                  meta = collections.OrderedDict([('ucd', 'pos.distance.comoving')]),
+                                                  format='{:.6f}', 
+                                                  description='Redshift-based comoving distance')
+
+
 
            
     
