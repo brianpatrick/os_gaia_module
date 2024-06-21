@@ -63,7 +63,7 @@ def get_distance(data:Table, parallax = 'Plx', dist='Dist', use='parallax'):
 
 # transforms a given set of coordinates in a pandas df (RA/DEC, L/B) to Cartesian XYZ
 # if given proper motions and radial velocities, also returns UVW and speed
-def get_cartesian(data:Table, frame='icrs', dist='dist_pc', ra='RAdeg', dec='DEdeg', glon='GLON', glat='GLAT', pmra='pmra', pmde='pmde', pmglon='pmglon', pmglat='pmglat', radial_velocity='radial_velocity', epoch='J2000'):
+def get_cartesian(data:Table, frame='icrs', dist='dist_pc', ra='ra', dec='dec', glon='GLON', glat='GLAT', pmra='pmra', pmde='pmdec', pmglon='pmglon', pmglat='pmglat', radial_velocity='radial_velocity', epoch='J2000'):
     
     #Raise exception if distance is not in data
     if(dist not in data.columns):
@@ -71,6 +71,10 @@ def get_cartesian(data:Table, frame='icrs', dist='dist_pc', ra='RAdeg', dec='DEd
         
     #setting the units based on the distance
     dist_unit = str(data[dist].unit)
+    if(dist_unit=='pc'):
+        dist_unit='parsecs'
+    elif(dist_unit=='Mpc'):
+        dist_unit='Megaparsecs'
     
     #We use the calculate_velocities indicator to inform the code whether or not proper motions and radial velocities have been provided.  It is defined as False unless pmra, pmde, and radial_velocity have been called
     calculate_velocities = False
@@ -162,7 +166,7 @@ def get_cartesian(data:Table, frame='icrs', dist='dist_pc', ra='RAdeg', dec='DEd
     data['x'] = data.MaskedColumn(data=galactic_coords.cartesian.x, 
                             meta = collections.OrderedDict([('ucd', 'pos.cartesian.x')]),
                             format='{:.6f}', 
-                            description='Position (x coordinate) in '+dist_unit)
+                            description='x position (galactic cartesian coordinates) in '+dist_unit)
     
     data['y'] = data.MaskedColumn(data=galactic_coords.cartesian.y, 
                             meta = collections.OrderedDict([('ucd', 'pos.cartesian.y')]),

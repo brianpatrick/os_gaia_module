@@ -292,3 +292,113 @@ For more information, please visit https://www.amnh.org/research/hayden-planetar
     print('    PreparedBy = "' + metadata['prepared_by'] + '",', file=out)
     print('    License = [[' + DU_license + ']]', file=out)
     print('}', file=out)
+
+
+
+# -----------------------------------------------------------------------------
+def generate_asset_file(metadata, data_display_type='Star Renderable'):
+    """
+    This function creates a new file called fileroot.asset and 
+    creates the OpenSpace asset file for a particular dataset.
+
+    :param metadata: A dataframe with metadata about the data set.
+    :type metadata: DataFrame
+    :param data_display_type: Indicates the renderable to use to display the data. Can be 'point cloud' or 'other' (need to fill in later)
+    :type data_display_type: str
+    """  
+
+    #set fileroot and object_name variables
+    fileroot = metadata['fileroot']
+    object_name = metadata['data_group_title']
+    
+    out = open(fileroot+'.asset', 'w')
+
+    #print colormap block
+    print('local colormaps = asset.resource({', file=out)
+    print('/tName = "Stars Color Table",', file=out)
+    print('/tType = "HttpSynchronization",', file=out)
+    print('/tIndentifier = "stars_colormap",', file=out)
+    print('/tVersion = 3', file=out)
+    print('})\n', file=out)
+
+    #print textures block
+    print('local textures = asset.resource({', file=out)
+    print('/tName = "Stars Textures",', file=out)
+    print('/tType = "HttpSynchronization",', file=out)
+    print('/tIndentifier = "stars_textures",', file=out)
+    print('/tVersion = 1', file=out)
+    print('})\n', file=out)
+
+    #print speck and label file arguments (will probably just use csv later)
+    print('local speck_file = asset.resource(\''+fileroot+'.speck\')', file=out)
+    print('local label_file = asset.resource(\''+fileroot+'.label\')', file=out)
+
+    #print object block
+    #may want to modify to allow changes to datamapping
+    print('local '+object_name+' = {', file=out)
+    print('\tIdentifier = \''+object_name+'\',', file=out)
+    #Renderable
+    print('\tRenderable = {', file=out)
+    print('\t\tType = \'RenderableStars\',', file=out) #this is where we can check for the Gaia Renderable when we get it from Jackie
+    print('\t\tFile = speck_file,', file=out)
+    #Halo
+    print('\t\tHalo = {', file=out)
+    print('\t\t\tTexture = textures .. \'halo.png\',', file=out)
+    print('\t\t\tMultiplier = 0.65', file=out)
+    print('\t\t},', file=out) #end of Halo
+    #Glare
+    print('\t\tGlare = {', file=out)
+    print('\t\t\tTexture = textures .. \'glare.png\',', file=out)
+    print('\t\t\tMultiplier = 15.0,', file=out)
+    print('\t\t\t\tGamma = 1.66,', file=out)
+    print('\t\t\t\tScale = 0.18', file=out)
+    print('\t\t},', file=out) #end of Glare
+    print('\t\tMagnitudeExponent = 6.325,', file=out)
+    print('\t\tColorMap = colormaps .. \'colorbv.cmap\',', file=out)
+    print('\t\tOtherDataColorMap = colormaps .. \'viridis.cmap\',', file=out)
+    print('\t\tSizeComposition = \'Distance Modulus\',', file=out)
+    #Data Mapping
+    print('\t\tDataMapping = {', file=out)  #This block is where we can add a potential for modification to the data mapping
+    print('\t\t\tBv = \"color\",', file=out)
+    print('\t\t\tLuminance = \"lum\",', file=out)
+    print('\t\t\tAbsoluteMagnitude = \"absmag\",', file=out)
+    print('\t\t\tApparentMagnitude = \"appmag\",', file=out)
+    print('\t\t\tVx = \"u\",', file=out)
+    print('\t\t\tVy = \"v\",', file=out)
+    print('\t\t\tVz = \"w\",', file=out)
+    print('\t\t\tSpeed = \"speed\",', file=out)
+    print('\t\t},', file=out) #end of Data Mapping
+    print('\t\tDimInAtmosphere = true', file=out)
+    print('\t},', file=out) #end of Renderable
+    print('\tTag = { \"daytime_hidden\" },', file=out)
+    #GUI
+    print('\tGUI = {', file=out)
+    print('\t\tName = \"'+object_name+'\",', file=out)
+    print('\t\tPath = \"/Milky Way/'+object_name+'\",', file=out)
+    print('\t\tDescription = [['+metadata['data_group_desc_long']+']]', file=out) #include catalog title/authors/bibcode?
+    print('\t}', file=out) #end of GUI
+    print('}', file=out) #end of object block
+
+    #print initialization and deinitialization blocks
+    print('asset.onInititialize(function()', file=out)
+    print('\topenspace.addSceneGraphNode('+object_name+')', file=out)
+    print('end)\n', file=out)
+
+    print('asset.onDeinititialize(function()', file=out)
+    print('\topenspace.removeSceneGraphNode('+object_name+')', file=out)
+    print('end)\n', file=out)
+
+    print('asset.export('+object_name+')', file=out)
+
+    print('\n', file=out)
+
+    #print meta block
+    print('asset.meta = {', file=out)
+    print('\tName = \"'+object_name+'\",', file=out)
+    print('\tVersion = \"3.0\",', file=out)
+    print('\tDescription = \"'+metadata['data_group_desc']+'\",', file=out)
+    print('\tAuthor = \"Brian Abbott (AMNH), Zack Reeves\",', file=out)
+    print('\tURL = \"https://www.amnh.org/research/hayden-planetarium/digital-universe\",', file=out)
+    print('\tLicense = \"AMNH Digital Universe\"', file=out)
+    print('}', file=out)
+    
