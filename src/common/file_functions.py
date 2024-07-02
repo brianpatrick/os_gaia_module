@@ -16,8 +16,8 @@ def test_input_file(path):
     :raises FileNotFoundError: Raised if the file does not exist.
     """
     if not path.is_file():
-        #sys.exit('\n\tInput file does not exist:\n\t' + str(path) + '\n\tExiting.\n')
-        raise FileNotFoundError('input file does not exist:\n\t' + str(path) + '\n\tExiting.\n')
+        #sys.exit('\n  Input file does not exist:\n  ' + str(path) + '\n  Exiting.\n')
+        raise FileNotFoundError('input file does not exist:\n  ' + str(path) + '\n  Exiting.\n')
 
 
 
@@ -36,17 +36,17 @@ def test_path(path):
 
     # If the path doesn't exist, find a graceful way to exit.
     if not Path.exists(path):
-        permission_create_dir = input('\tCreate directory ./' + str(relative_filepath) + '? (y/n/q): ')
+        permission_create_dir = input('  Create directory ./' + str(relative_filepath) + '? (y/n/q): ')
         
         if permission_create_dir == 'y':
             Path(path).mkdir(parents=True)
-            print('\t -- Created directory: ./' + str(relative_filepath))
+            print('   -- Created directory: ./' + str(relative_filepath))
         elif permission_create_dir == 'n':
-            sys.exit('\n\t -- Cannot write output file. Rerun and create the directory.\n\tExiting.\n')
+            sys.exit('\n   -- Cannot write output file. Rerun and create the directory.\n  Exiting.\n')
         elif permission_create_dir == 'q':
-            sys.exit("\n\t -- You've chosen to quit.\n\tExiting.\n")
+            sys.exit("\n   -- You've chosen to quit.\n  Exiting.\n")
         else:
-            sys.exit("\n\t -- Not a valid choice. Choose 'y' to create the necessary directory.\n\tExiting.\n")
+            sys.exit("\n   -- Not a valid choice. Choose 'y' to create the necessary directory.\n  Exiting.\n")
     # else:   # debugging purposes
     #     print('Path exists???')
 
@@ -108,12 +108,12 @@ def to_csv(metadata, df, columns):
     # every speck file as named.
     column_lines = ''
     for i in range(len(df_csv.columns)):
-        column_lines += '# COLUMN ' + ' ' + df_csv.columns[i] + '\t' + columns['description'][i] + '\n'
+        column_lines += '# COLUMN ' + ' ' + df_csv.columns[i] + '  ' + columns['description'][i] + '\n'
     # names
     print(column_lines+'#', file=out)
 
     # Print the data
-    print(df_csv.to_csv(path_or_buf=None, index=False), file=out)
+    print(df_csv.to_csv(path_or_buf=None, lineterminator='\n', index=False), file=out)
 
 
 
@@ -160,7 +160,7 @@ def to_speck(metadata, df, columns):
     # every speck file as named.
     datavar_lines = ''
     for i in range(3, list(df_speck.columns).index('speck_label')):
-        datavar_lines += 'datavar ' + str(i-3) + ' ' + df_speck.columns[i] + '\t # ' + columns['description'][i] + '\n'
+        datavar_lines += 'datavar ' + str(i-3) + ' ' + df_speck.columns[i] + '   # ' + columns['description'][i] + '\n'
     # names
     print(datavar_lines, file=out)
 
@@ -296,14 +296,14 @@ For more information, please visit https://www.amnh.org/research/hayden-planetar
 
 
 # -----------------------------------------------------------------------------
-def generate_asset_file(metadata, data_display_type='Star Renderable'):
+def generate_asset_file(metadata, data_display_type="Star Renderable"):
     """
     This function creates a new file called fileroot.asset and 
     creates the OpenSpace asset file for a particular dataset.
 
     :param metadata: A dataframe with metadata about the data set.
     :type metadata: DataFrame
-    :param data_display_type: Indicates the renderable to use to display the data. Can be 'point cloud' or 'other' (need to fill in later)
+    :param data_display_type: Indicates the renderable to use to display the data. Can be "point cloud" or "other" (need to fill in later)
     :type data_display_type: str
     """  
 
@@ -315,77 +315,77 @@ def generate_asset_file(metadata, data_display_type='Star Renderable'):
 
     #print colormap block
     print('local colormaps = asset.resource({', file=out)
-    print('/tName = "Stars Color Table",', file=out)
-    print('/tType = "HttpSynchronization",', file=out)
-    print('/tIndentifier = "stars_colormap",', file=out)
-    print('/tVersion = 3', file=out)
+    print('  Name = "Stars Color Table",', file=out)
+    print('  Type = "HttpSynchronization",', file=out)
+    print('  Identifier = "stars_colormap",', file=out)
+    print('  Version = 3', file=out)
     print('})\n', file=out)
 
     #print textures block
     print('local textures = asset.resource({', file=out)
-    print('/tName = "Stars Textures",', file=out)
-    print('/tType = "HttpSynchronization",', file=out)
-    print('/tIndentifier = "stars_textures",', file=out)
-    print('/tVersion = 1', file=out)
+    print('  Name = "Stars Textures",', file=out)
+    print('  Type = "HttpSynchronization",', file=out)
+    print('  Identifier = "stars_textures",', file=out)
+    print('  Version = 1', file=out)
     print('})\n', file=out)
 
     #print speck and label file arguments (will probably just use csv later)
-    print('local speck_file = asset.resource(\''+fileroot+'.speck\')', file=out)
-    print('local label_file = asset.resource(\''+fileroot+'.label\')', file=out)
+    print('local speck_file = asset.resource(\"'+fileroot+'.speck\")', file=out)
+    print('local label_file = asset.resource(\"'+fileroot+'.label\")', file=out)
 
     #print object block
     #may want to modify to allow changes to datamapping
     print('local '+object_name+' = {', file=out)
-    print('\tIdentifier = \''+object_name+'\',', file=out)
+    print('  Identifier = \"'+object_name+'\",', file=out)
     #Renderable
-    print('\tRenderable = {', file=out)
-    print('\t\tType = \'RenderableStars\',', file=out) #this is where we can check for the Gaia Renderable when we get it from Jackie
-    print('\t\tFile = speck_file,', file=out)
+    print('  Renderable = {', file=out)
+    print('    Type = \"RenderableStars\",', file=out) #this is where we can check for the Gaia Renderable when we get it from Jackie
+    print('    File = speck_file,', file=out)
     #Halo
-    print('\t\tHalo = {', file=out)
-    print('\t\t\tTexture = textures .. \'halo.png\',', file=out)
-    print('\t\t\tMultiplier = 0.65', file=out)
-    print('\t\t},', file=out) #end of Halo
+    print('    Halo = {', file=out)
+    print('      Texture = textures .. \"halo.png\",', file=out)
+    print('      Multiplier = 0.65', file=out)
+    print('    },', file=out) #end of Halo
     #Glare
-    print('\t\tGlare = {', file=out)
-    print('\t\t\tTexture = textures .. \'glare.png\',', file=out)
-    print('\t\t\tMultiplier = 15.0,', file=out)
-    print('\t\t\t\tGamma = 1.66,', file=out)
-    print('\t\t\t\tScale = 0.18', file=out)
-    print('\t\t},', file=out) #end of Glare
-    print('\t\tMagnitudeExponent = 6.325,', file=out)
-    print('\t\tColorMap = colormaps .. \'colorbv.cmap\',', file=out)
-    print('\t\tOtherDataColorMap = colormaps .. \'viridis.cmap\',', file=out)
-    print('\t\tSizeComposition = \'Distance Modulus\',', file=out)
+    print('    Glare = {', file=out)
+    print('      Texture = textures .. \"glare.png\",', file=out)
+    print('      Multiplier = 15.0,', file=out)
+    print('        Gamma = 1.66,', file=out)
+    print('        Scale = 0.18', file=out)
+    print('    },', file=out) #end of Glare
+    print('    MagnitudeExponent = 6.325,', file=out)
+    print('    ColorMap = colormaps .. \"colorbv.cmap\",', file=out)
+    print('    OtherDataColorMap = colormaps .. \"viridis.cmap\",', file=out)
+    print('    SizeComposition = \"Distance Modulus\",', file=out)
     #Data Mapping
-    print('\t\tDataMapping = {', file=out)  #This block is where we can add a potential for modification to the data mapping
-    print('\t\t\tBv = \"color\",', file=out)
-    print('\t\t\tLuminance = \"lum\",', file=out)
-    print('\t\t\tAbsoluteMagnitude = \"absmag\",', file=out)
-    print('\t\t\tApparentMagnitude = \"appmag\",', file=out)
-    print('\t\t\tVx = \"u\",', file=out)
-    print('\t\t\tVy = \"v\",', file=out)
-    print('\t\t\tVz = \"w\",', file=out)
-    print('\t\t\tSpeed = \"speed\",', file=out)
-    print('\t\t},', file=out) #end of Data Mapping
-    print('\t\tDimInAtmosphere = true', file=out)
-    print('\t},', file=out) #end of Renderable
-    print('\tTag = { \"daytime_hidden\" },', file=out)
+    print('    DataMapping = {', file=out)  #This block is where we can add a potential for modification to the data mapping
+    print('      Bv = \"color\",', file=out)
+    print('      Luminance = \"lum\",', file=out)
+    print('      AbsoluteMagnitude = \"absmag\",', file=out)
+    print('      ApparentMagnitude = \"appmag\",', file=out)
+    print('      Vx = \"u\",', file=out)
+    print('      Vy = \"v\",', file=out)
+    print('      Vz = \"w\",', file=out)
+    print('      Speed = \"speed\"', file=out)
+    print('    },', file=out) #end of Data Mapping
+    print('    DimInAtmosphere = true', file=out)
+    print('  },', file=out) #end of Renderable
+    print('  Tag = { \"daytime_hidden\" },', file=out)
     #GUI
-    print('\tGUI = {', file=out)
-    print('\t\tName = \"'+object_name+'\",', file=out)
-    print('\t\tPath = \"/Milky Way/'+object_name+'\",', file=out)
-    print('\t\tDescription = [['+metadata['data_group_desc_long']+']]', file=out) #include catalog title/authors/bibcode?
-    print('\t}', file=out) #end of GUI
+    print('  GUI = {', file=out)
+    print('    Name = \"'+object_name+'\",', file=out)
+    print('    Path = \"/Milky Way/Stars/'+object_name+'\",', file=out)
+    print('    Description = [['+metadata['data_group_desc_long']+']]', file=out) #include catalog title/authors/bibcode?
+    print('  }', file=out) #end of GUI
     print('}', file=out) #end of object block
 
     #print initialization and deinitialization blocks
-    print('asset.onInititialize(function()', file=out)
-    print('\topenspace.addSceneGraphNode('+object_name+')', file=out)
+    print('asset.onInitialize(function()', file=out)
+    print('  openspace.addSceneGraphNode('+object_name+')', file=out)
     print('end)\n', file=out)
 
-    print('asset.onDeinititialize(function()', file=out)
-    print('\topenspace.removeSceneGraphNode('+object_name+')', file=out)
+    print('asset.onDeinitialize(function()', file=out)
+    print('  openspace.removeSceneGraphNode('+object_name+')', file=out)
     print('end)\n', file=out)
 
     print('asset.export('+object_name+')', file=out)
@@ -394,11 +394,11 @@ def generate_asset_file(metadata, data_display_type='Star Renderable'):
 
     #print meta block
     print('asset.meta = {', file=out)
-    print('\tName = \"'+object_name+'\",', file=out)
-    print('\tVersion = \"3.0\",', file=out)
-    print('\tDescription = \"'+metadata['data_group_desc']+'\",', file=out)
-    print('\tAuthor = \"Brian Abbott (AMNH), Zack Reeves\",', file=out)
-    print('\tURL = \"https://www.amnh.org/research/hayden-planetarium/digital-universe\",', file=out)
-    print('\tLicense = \"AMNH Digital Universe\"', file=out)
+    print('  Name = \"'+object_name+'\",', file=out)
+    print('  Version = \"3.0\",', file=out)
+    print('  Description = \"'+metadata['data_group_desc']+'\",', file=out)
+    print('  Author = \"Brian Abbott (AMNH), Zack Reeves\",', file=out)
+    print('  URL = \"https://www.amnh.org/research/hayden-planetarium/digital-universe\",', file=out)
+    print('  License = \"AMNH Digital Universe\"', file=out)
     print('}', file=out)
     
