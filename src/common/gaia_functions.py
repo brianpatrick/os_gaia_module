@@ -29,16 +29,16 @@ from common import file_functions, calculations
 #setting dcalc and distance
 #requires r_med_geo and r_med_photogeo
 def set_bj_distance(data:Table):
-    #setting dcalc based on r_med_geo (if>500pc and photogeo exists, we choose photogeo and set dcalc to 1, else geo and dcalc to 2)
-    data['dcalc'] = [1 if((not(np.ma.is_masked(data['r_med_photogeo'][i])))and(data['r_med_geo'][i]>500)) else 2 for i in range(len(data))]
+    #setting dcalc based on r_med_geo (if>500pc and photogeo exists, we choose photogeo and set dcalc to 1, else geo if it exists and dcalc is set to 2, else we calculate the parallax based distance ourselves and dcalc is set to 3)
+    data['dcalc'] = [1 if((not(np.ma.is_masked(data['r_med_photogeo'][i])))and(data['r_med_geo'][i]>500)) else 2 if (not(np.ma.is_masked(data['r_med_geo'][i]))) else 3 for i in range(len(data))]
     
     #setting metadata for dcalc
     data['dcalc'] = data.Column(data['dcalc'],
                                 meta=collections.OrderedDict([('ucd', 'meta.dcalc')]),
-                                description='Distance Indicator: 1 indicates a Bailer-Jones photogeometric distance; 2 indicates a Bailer-Jones geometric distance')
+                                description='Distance Indicator: 1 indicates a Bailer-Jones photogeometric distance; 2 indicates a Bailer-Jones geometric distance; 3 indicates a Gaia parallax based distance')
     
     #Choosing distance based on dcalc
-    data['bj_distance'] = [data['r_med_photogeo'][i] if data['dcalc'][i]==1 else data['r_med_geo'][i] for i in range(len(data))]
+    data['bj_distance'] = [data['r_med_photogeo'][i] if data['dcalc'][i]==1 else data['r_med_geo'][i] if data['dcalc'][i]==2 else 1000/data['parallax'][i] for i in range(len(data))]
     data['bj_distance'].unit=u.pc
     
     #Choosing and calculating distance error based on the distance we chose
@@ -49,8 +49,8 @@ def set_bj_distance(data:Table):
 #calculating absolute magnitudes and setting a column for apparent magnitudes
 #currently uses Gaia green band magnitude
 #requires phot_g_mean_mag and dist_pc
-def get_magnitudes(data:Table):
-    data['appmag'] = data.MaskedColumn(data=data['phot_g_mean_mag'],
+def get_magnitudes(data:Table, gmag='phot_g_mean_mag'):
+    data['appmag'] = data.MaskedColumn(data=data[gmag],
                                        unit=u.mag,
                                        meta=collections.OrderedDict([('ucd', 'phot.mag;em.opt.G')]),
                                        format='{:.6f}',
@@ -78,8 +78,8 @@ def get_luminosity(data:Table):
 
 
 #setting color
-def get_bp_g_color(data:Table):
-    data['color'] = data.MaskedColumn(data=data['bp_g'],
+def get_bp_g_color(data:Table, color='bp_g'):
+    data['color'] = data.MaskedColumn(data=data[color],
                                       unit=u.solLum,
                                       meta=collections.OrderedDict([('ucd', 'phys.color')]),
                                       format='{:.2f}',
