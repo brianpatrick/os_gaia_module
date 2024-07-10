@@ -296,7 +296,7 @@ For more information, please visit https://www.amnh.org/research/hayden-planetar
 
 
 # -----------------------------------------------------------------------------
-def generate_asset_file(metadata, data_display_type="Star Renderable", path = "MilkyWay/Stars"):
+def generate_asset_file(metadata, data_display_type="Star Renderable", path = "/Milky Way/Stars"):
     """
     This function creates a new file called fileroot.asset and 
     creates the OpenSpace asset file for a particular dataset.
@@ -311,7 +311,12 @@ def generate_asset_file(metadata, data_display_type="Star Renderable", path = "M
     fileroot = metadata['fileroot']
     object_name = metadata['data_group_title'].replace(' ', '_')
     
-    out = open(fileroot+'.asset', 'w')
+    if (data_display_type == 'Gaia Renderable'):
+        asset_fileroot = fileroot+'_GaiaRenderable'
+    else:
+        asset_fileroot = fileroot
+    
+    out = open(asset_fileroot+'.asset', 'w')
 
     #print colormap block
     print('local colormaps = asset.resource({', file=out)
@@ -385,41 +390,41 @@ def generate_asset_file(metadata, data_display_type="Star Renderable", path = "M
     
     elif (data_display_type == 'Gaia Renderable'):
         
-        print('local '+object_name' = {')
-        print('  Identifier = \"'+object_name+'\",')
-        print('  Renderable = {')
-        print('    Type = \"RenderableGaiaStars\",')
-        print('    File = data_file,')
-        print('    FileReaderOption = \"csv\",')
-        print('    RenderMode = \"Motion\",')
-        print('    ShaderOption = \"Point_SSBO\",')
-        print('    Texture = texture_file,')
-        print('    ColorMap = colormaps .. \"colorbv.cmap\",')
-        print('    LuminosityMultiplier = 35,')
-        print('    MagnitudeBoost = 25,')
-        print('    CutOffThreshold = 38,')
-        print('    BillboardSize = 1,')
-        print('    CloseUpBoostDist = 250,')
-        print('    Sharpness = 1.45,')
-        print('    LodPixelThreshold = 0,')
-        print('    MaxGpuMemoryPercent = 0.24,')
-        print('    MaxCpuMemoryPercent = 0.4,')
-        print('    FilterSize = 5,')
-        print('    Sigma = 0.5,')
-        print('    AdditionalNodes = { 3.0, 2.0 },')
-        print('    FilterPosX = { 0.0, 0.0 },')
-        print('    FilterPosY = { 0.0, 0.0 },')
-        print('    FilterPosZ = { 0.0, 0.0 },')
-        print('    FilterGMag = { 20.0, 20.0 },')
-        print('    FilterBpRp = { 0.0, 0.0 },')
-        print('    FilterDist = { 9.0, 9.0 }')
-        print('  },')
-        print('  GUI = {')
-        print('    Name = \"'+metadata['data_group_title']+'\",')
-        print('    Path = \"'+path+'\",')
-        print('    Description = \"'+metadata['data_group_desc_long']+'\"')
-        print('  }')
-        print('}')
+        print('local '+object_name+' = {', file=out)
+        print('  Identifier = \"'+object_name+'\",', file=out)
+        print('  Renderable = {', file=out)
+        print('    Type = \"RenderableGaiaStars\",', file=out)
+        print('    File = data_file,', file=out)
+        print('    FileReaderOption = \"Speck\",', file=out)
+        print('    RenderMode = \"Motion\",', file=out)
+        print('    ShaderOption = \"Point_SSBO\",', file=out)
+        print('    Texture = textures .. \"halo.png\",', file=out)
+        print('    ColorMap = colormaps .. \"colorbv.cmap\",', file=out)
+        print('    LuminosityMultiplier = 35,', file=out)
+        print('    MagnitudeBoost = 25,', file=out)
+        print('    CutOffThreshold = 38,', file=out)
+        print('    BillboardSize = 1,', file=out)
+        print('    CloseUpBoostDist = 250,', file=out)
+        print('    Sharpness = 1.45,', file=out)
+        print('    LodPixelThreshold = 0,', file=out)
+        print('    MaxGpuMemoryPercent = 0.24,', file=out)
+        print('    MaxCpuMemoryPercent = 0.4,', file=out)
+        print('    FilterSize = 5,', file=out)
+        print('    Sigma = 0.5,', file=out)
+        print('    AdditionalNodes = { 3.0, 2.0 },', file=out)
+        print('    FilterPosX = { 0.0, 0.0 },', file=out)
+        print('    FilterPosY = { 0.0, 0.0 },', file=out)
+        print('    FilterPosZ = { 0.0, 0.0 },', file=out)
+        print('    FilterGMag = { 20.0, 20.0 },', file=out)
+        print('    FilterBpRp = { 0.0, 0.0 },', file=out)
+        print('    FilterDist = { 9.0, 9.0 }', file=out)
+        print('  },', file=out)
+        print('  GUI = {', file=out)
+        print('    Name = \"'+metadata['data_group_title']+'\",', file=out)
+        print('    Path = \"'+path+'\",', file=out)
+        print('    Description = \"'+metadata['data_group_desc_long']+'\"', file=out)
+        print('  }', file=out)
+        print('}', file=out)
     
     
 
