@@ -113,7 +113,7 @@ def to_csv(metadata, df, columns):
     print(column_lines+'#', file=out)
 
     # Print the data
-    print(df_csv.to_csv(path_or_buf=None, lineterminator='\n', index=False), file=out)
+    print(df_csv.to_csv(path_or_buf=None, header=False, lineterminator='\n', index=False), file=out)
 
 
 
@@ -296,20 +296,20 @@ For more information, please visit https://www.amnh.org/research/hayden-planetar
 
 
 # -----------------------------------------------------------------------------
-def generate_asset_file(metadata, data_display_type="Star Renderable"):
+def generate_asset_file(metadata, data_display_type="Star Renderable", path = "MilkyWay/Stars"):
     """
     This function creates a new file called fileroot.asset and 
     creates the OpenSpace asset file for a particular dataset.
 
     :param metadata: A dataframe with metadata about the data set.
     :type metadata: DataFrame
-    :param data_display_type: Indicates the renderable to use to display the data. Can be "point cloud" or "other" (need to fill in later)
+    :param data_display_type: Indicates the renderable to use to display the data. Can be "Star Renderable" or "Gaia Renderable"; may eventually support point cloud as well
     :type data_display_type: str
     """  
 
     #set fileroot and object_name variables
     fileroot = metadata['fileroot']
-    object_name = metadata['data_group_title']
+    object_name = metadata['data_group_title'].replace(' ', '_')
     
     out = open(fileroot+'.asset', 'w')
 
@@ -329,55 +329,99 @@ def generate_asset_file(metadata, data_display_type="Star Renderable"):
     print('  Version = 1', file=out)
     print('})\n', file=out)
 
-    #print speck and label file arguments (will probably just use csv later)
-    print('local speck_file = asset.resource(\"'+fileroot+'.speck\")', file=out)
-    print('local label_file = asset.resource(\"'+fileroot+'.label\")', file=out)
+    #print data file arguments
+    print('local data_file = asset.resource(\"'+fileroot+'.csv\")', file=out)
+#     print('local speck_file = asset.resource(\"'+fileroot+'.speck\")', file=out)
+#     print('local label_file = asset.resource(\"'+fileroot+'.label\")', file=out)
 
     #print object block
     #may want to modify to allow changes to datamapping
-    print('local '+object_name+' = {', file=out)
-    print('  Identifier = \"'+object_name+'\",', file=out)
-    #Renderable
-    print('  Renderable = {', file=out)
-    print('    Type = \"RenderableStars\",', file=out) #this is where we can check for the Gaia Renderable when we get it from Jackie
-    print('    File = speck_file,', file=out)
-    #Halo
-    print('    Halo = {', file=out)
-    print('      Texture = textures .. \"halo.png\",', file=out)
-    print('      Multiplier = 0.65', file=out)
-    print('    },', file=out) #end of Halo
-    #Glare
-    print('    Glare = {', file=out)
-    print('      Texture = textures .. \"glare.png\",', file=out)
-    print('      Multiplier = 15.0,', file=out)
-    print('        Gamma = 1.66,', file=out)
-    print('        Scale = 0.18', file=out)
-    print('    },', file=out) #end of Glare
-    print('    MagnitudeExponent = 6.325,', file=out)
-    print('    ColorMap = colormaps .. \"colorbv.cmap\",', file=out)
-    print('    OtherDataColorMap = colormaps .. \"viridis.cmap\",', file=out)
-    print('    SizeComposition = \"Distance Modulus\",', file=out)
-    #Data Mapping
-    print('    DataMapping = {', file=out)  #This block is where we can add a potential for modification to the data mapping
-    print('      Bv = \"color\",', file=out)
-    print('      Luminance = \"lum\",', file=out)
-    print('      AbsoluteMagnitude = \"absmag\",', file=out)
-    print('      ApparentMagnitude = \"appmag\",', file=out)
-    print('      Vx = \"u\",', file=out)
-    print('      Vy = \"v\",', file=out)
-    print('      Vz = \"w\",', file=out)
-    print('      Speed = \"speed\"', file=out)
-    print('    },', file=out) #end of Data Mapping
-    print('    DimInAtmosphere = true', file=out)
-    print('  },', file=out) #end of Renderable
-    print('  Tag = { \"daytime_hidden\" },', file=out)
-    #GUI
-    print('  GUI = {', file=out)
-    print('    Name = \"'+object_name+'\",', file=out)
-    print('    Path = \"/Milky Way/Stars/'+object_name+'\",', file=out)
-    print('    Description = [['+metadata['data_group_desc_long']+']]', file=out) #include catalog title/authors/bibcode?
-    print('  }', file=out) #end of GUI
-    print('}', file=out) #end of object block
+    
+    if (data_display_type == 'Star Renderable'):
+        #start of Star Renderable block
+        print('local '+object_name+' = {', file=out)
+        print('  Identifier = \"'+object_name+'\",', file=out)
+        #Renderable
+        print('  Renderable = {', file=out)
+        print('    Type = \"RenderableStars\",', file=out) #this is where we can check for the Gaia Renderable when we get it from Jackie
+        print('    File = data_file,', file=out)
+        #Halo
+        print('    Halo = {', file=out)
+        print('      Texture = textures .. \"halo.png\",', file=out)
+        print('      Multiplier = 0.65', file=out)
+        print('    },', file=out) #end of Halo
+        #Glare
+        print('    Glare = {', file=out)
+        print('      Texture = textures .. \"glare.png\",', file=out)
+        print('      Multiplier = 15.0,', file=out)
+        print('        Gamma = 1.66,', file=out)
+        print('        Scale = 0.18', file=out)
+        print('    },', file=out) #end of Glare
+        print('    MagnitudeExponent = 6.325,', file=out)
+        print('    ColorMap = colormaps .. \"colorbv.cmap\",', file=out)
+        print('    OtherDataColorMap = colormaps .. \"viridis.cmap\",', file=out)
+        print('    SizeComposition = \"Distance Modulus\",', file=out)
+        #Data Mapping
+        print('    DataMapping = {', file=out)  #This block is where we can add a potential for modification to the data mapping
+        print('      Bv = \"color\",', file=out)
+        print('      Luminance = \"lum\",', file=out)
+        print('      AbsoluteMagnitude = \"absmag\",', file=out)
+        print('      ApparentMagnitude = \"appmag\",', file=out)
+        print('      Vx = \"u\",', file=out)
+        print('      Vy = \"v\",', file=out)
+        print('      Vz = \"w\",', file=out)
+        print('      Speed = \"speed\"', file=out)
+        print('    },', file=out) #end of Data Mapping
+        print('    DimInAtmosphere = true', file=out)
+        print('  },', file=out) #end of Renderable
+        print('  Tag = { \"daytime_hidden\" },', file=out)
+        #GUI
+        print('  GUI = {', file=out)
+        print('    Name = \"'+object_name+'\",', file=out)
+        print('    Path = \"/Milky Way/Stars/'+object_name+'\",', file=out)
+        print('    Description = [['+metadata['data_group_desc_long']+']]', file=out) #include catalog title/authors/bibcode?
+        print('  }', file=out) #end of GUI
+        print('}', file=out) #end of object block
+    
+    elif (data_display_type == 'Gaia Renderable'):
+        
+        print('local '+object_name' = {')
+        print('  Identifier = \"'+object_name+'\",')
+        print('  Renderable = {')
+        print('    Type = \"RenderableGaiaStars\",')
+        print('    File = data_file,')
+        print('    FileReaderOption = \"csv\",')
+        print('    RenderMode = \"Motion\",')
+        print('    ShaderOption = \"Point_SSBO\",')
+        print('    Texture = texture_file,')
+        print('    ColorMap = colormaps .. \"colorbv.cmap\",')
+        print('    LuminosityMultiplier = 35,')
+        print('    MagnitudeBoost = 25,')
+        print('    CutOffThreshold = 38,')
+        print('    BillboardSize = 1,')
+        print('    CloseUpBoostDist = 250,')
+        print('    Sharpness = 1.45,')
+        print('    LodPixelThreshold = 0,')
+        print('    MaxGpuMemoryPercent = 0.24,')
+        print('    MaxCpuMemoryPercent = 0.4,')
+        print('    FilterSize = 5,')
+        print('    Sigma = 0.5,')
+        print('    AdditionalNodes = { 3.0, 2.0 },')
+        print('    FilterPosX = { 0.0, 0.0 },')
+        print('    FilterPosY = { 0.0, 0.0 },')
+        print('    FilterPosZ = { 0.0, 0.0 },')
+        print('    FilterGMag = { 20.0, 20.0 },')
+        print('    FilterBpRp = { 0.0, 0.0 },')
+        print('    FilterDist = { 9.0, 9.0 }')
+        print('  },')
+        print('  GUI = {')
+        print('    Name = \"'+metadata['data_group_title']+'\",')
+        print('    Path = \"'+path+'\",')
+        print('    Description = \"'+metadata['data_group_desc_long']+'\"')
+        print('  }')
+        print('}')
+    
+    
 
     #print initialization and deinitialization blocks
     print('asset.onInitialize(function()', file=out)
@@ -395,7 +439,7 @@ def generate_asset_file(metadata, data_display_type="Star Renderable"):
     #print meta block
     print('asset.meta = {', file=out)
     print('  Name = \"'+object_name+'\",', file=out)
-    print('  Version = \"3.0\",', file=out)
+    print('  Version = \"1.0\",', file=out)
     print('  Description = \"'+metadata['data_group_desc']+'\",', file=out)
     print('  Author = \"Brian Abbott (AMNH), Zack Reeves\",', file=out)
     print('  URL = \"https://www.amnh.org/research/hayden-planetarium/digital-universe\",', file=out)
