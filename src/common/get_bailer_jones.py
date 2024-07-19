@@ -84,6 +84,10 @@ def get_bj_distances(data:Table, source_id='source_id', columns=None, get_motion
         distances['e_bj_dist'] = [(distances['r_hi'][i]-distances['r_lo'][i])/2 for i in range(len(distances))]
     else:
         distances['e_bj_dist'] = [((distances['r_hi_photogeo'][i]-distances['r_lo_photogeo'][i])/2)*u.pc if((not(np.ma.is_masked(distances['r_med_photogeo'][i])))and(distances['r_med_geo'][i]>500)) else ((distances['r_hi_geo'][i]-distances['r_lo_geo'][i])/2)*u.pc for i in range(len(distances))]
+
+    distances['dcalc'] = data.Column(data=distances['dcalc'], 
+                                     meta=collections.OrderedDict([('ucd', 'meta.dist')]),
+                                     description='Distance indicator: 1 indicates a Bailer-Jones geometric distance; 2 indicates a Bailer-Jones photogeometric distance')
     
     
     #Calculate distance error percentage
