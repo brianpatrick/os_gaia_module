@@ -12,6 +12,7 @@ src/common/SciServer_credentials.txt
 *.dat
 *.cmap
 *.csv
+*.fits
 **raw_data/
 **references/
 license_*.lua

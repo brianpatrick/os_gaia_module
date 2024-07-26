@@ -6,6 +6,7 @@ from astropy.table import Table, join
 from astroquery.gaia import Gaia
 from astroquery.utils.tap.core import TapPlus
 import astropy.units as u
+import collections
 
 #when calling the function, source_id should be set as whatever the Gaia EDR3, DR3, or DR2 ID is called in the table
 #the IDs should be the raw id string, no prefix
@@ -17,7 +18,7 @@ def get_bj_distances(data:Table, source_id='source_id', columns=None, get_motion
     
     #get username from credentials file for query
     with open('../common/gaia_credentials.txt', 'r') as file:
-        username = file.readline()
+        username = file.readline().strip()
         
     #set proper motion and radial velocity columns if needed
     if(get_motion):
@@ -41,7 +42,7 @@ def get_bj_distances(data:Table, source_id='source_id', columns=None, get_motion
         raise Exception('Context must be DR2, EDR3, or DR3')
         
     #construct query
-    query = "select a.*, "+gaia_source_columns+bj_columns+" "+"from user_"+username+".gaia_ids a left join "+gaia_source_table+" gs on a."+source_id+" = gs.source_id left join "+bj_table+" bj on a."+source_id+" = bj.source_id"
+    query = "select a.*, "+gaia_source_columns+bj_columns+" "+"from user_"+username+".gaia_ids a inner join "+gaia_source_table+" gs on a."+source_id+" = gs.source_id inner join "+bj_table+" bj on a."+source_id+" = bj.source_id"
 
     
     #create a table with the columns specified
@@ -65,7 +66,7 @@ def get_bj_distances(data:Table, source_id='source_id', columns=None, get_motion
     distances.remove_column('gaia_ids_oid')
     
     #Deleting table and job from Gaia ESA server so we don't clog the memory
-    Gaia.delete_user_table('gaia_ids')
+    Gaia.delete_user_table(table_name = 'gaia_ids')
     Gaia.remove_jobs(job.jobid)
 
     Gaia.logout()
