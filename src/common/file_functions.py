@@ -296,14 +296,14 @@ For more information, please visit https://www.amnh.org/research/hayden-planetar
 
 
 # -----------------------------------------------------------------------------
-def generate_asset_file(metadata, data_display_type="Star Renderable", path = "/Milky Way/Stars"):
+def generate_asset_file(metadata, RenderableType="RenderableStars", path = "/Milky Way/Stars"):
     """
     This function creates a new file called fileroot.asset and 
     creates the OpenSpace asset file for a particular dataset.
 
     :param metadata: A dataframe with metadata about the data set.
     :type metadata: DataFrame
-    :param data_display_type: Indicates the renderable to use to display the data. Can be "Star Renderable" or "Gaia Renderable"; may eventually support point cloud as well
+    :param data_display_type: Indicates the renderable to use to display the data. Can be "RenderableStars" or "RenderableGaiaStars"; may eventually support point cloud as well
     :type data_display_type: str
     """  
 
@@ -311,10 +311,12 @@ def generate_asset_file(metadata, data_display_type="Star Renderable", path = "/
     fileroot = metadata['fileroot']
     object_name = metadata['data_group_title'].replace(' ', '_')
     
-    if (data_display_type == 'Gaia Renderable'):
+    if (RenderableType == 'RenderableGaiaStars'):
         asset_fileroot = fileroot+'_GaiaRenderable'
-    else:
+    elif (RenderableType == 'RenderableStars'):
         asset_fileroot = fileroot
+    else:
+        raise Exception('RenderableType must be RenderableStars or RenderableGaiaStars')
     
     out = open(asset_fileroot+'.asset', 'w')
 
@@ -342,7 +344,7 @@ def generate_asset_file(metadata, data_display_type="Star Renderable", path = "/
     #print object block
     #may want to modify to allow changes to datamapping
     
-    if (data_display_type == 'Star Renderable'):
+    if (RenderableType == 'RenderableStars'):
         #start of Star Renderable block
         print('local '+object_name+' = {', file=out)
         print('  Identifier = \"'+object_name+'\",', file=out)
@@ -388,7 +390,7 @@ def generate_asset_file(metadata, data_display_type="Star Renderable", path = "/
         print('  }', file=out) #end of GUI
         print('}', file=out) #end of object block
     
-    elif (data_display_type == 'Gaia Renderable'):
+    elif (RenderableType == 'RenderableGaiaStars'):
         
         print('local '+object_name+' = {', file=out)
         print('  Identifier = \"'+object_name+'\",', file=out)
