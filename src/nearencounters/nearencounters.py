@@ -1,15 +1,16 @@
-# %
 # PROCESS THE BAILER-JONES NEAR ENCOUNTERS CATALOG:
 # https://cdsarc.cds.unistra.fr/viz-bin/cat/J/ApJ/935/L9
 #
 #
 # ZACK REEVES
 # CREATED: 2024
+# CADE MOHRHARDT
+# UPDATED: 2025
 #
 # VERSIONS:
 #  1.1  MAR 2024 CREATE JUPYTER NOTEBOOK
+#  Python 3.12.12 OCT 2025
 
-# %
 import pandas as pd
 import numpy as np
 import sys
@@ -28,7 +29,6 @@ from common import file_functions, calculations
 
 from matplotlib import pyplot as plt, colors
 
-# %
 # Define the metadata for the data set. 
 metadata = {}
 
@@ -41,7 +41,7 @@ metadata['catalog_year'] = '2022'
 metadata['catalog_doi'] = 'doi:10.1051/0004-6361/202039498'  #need to fix
 metadata['catalog_bibcode'] = '2021A&A...649A...6G' #need to fix
 
-metadata['prepared_by'] = 'Zack Reeves (AMNH)'
+metadata['prepared_by'] = 'Zack Reeves (AMNH), Cade Mohrhardt (AMNH)'
 metadata['version'] = '1.1'
 
 metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
@@ -55,16 +55,13 @@ metadata['fileroot'] = 'near_encounters'
 file_functions.generate_license_file(metadata)
 file_functions.generate_asset_file(metadata)
 
-# %
 #reading in the catalogue
 catalog = Vizier(catalog='J/ApJ/935/L9/table12', columns=['**'], row_limit=-1).query_constraints()
 catalog[0]
 
-# %
 #reducing data down to the necessary columns
 data = catalog[0][['GaiaDR3', 'tphmed', 'dphmed', 'vphmed', 'Plx', 'e_Plx', 'RV', 'Gmag', 'GMAG', 'GLON', 'GLAT']]
 
-# %
 #Query Gaia ESA ADQL server using Gaia EDR3 IDs to obtain proper motion and RA/DEC to calculate uvw
 
 #log in to Gaia Server - Can change to different credentials file for a different user
@@ -92,22 +89,17 @@ Gaia.remove_jobs(job.jobid)
 
 Gaia.logout()
 
-# %
 data
 
-# %
 #calculating distance in light years and parsecs
 calculations.get_distance(data, parallax='Plx', use='parallax')
 
-# %
 #calculating cartesian coordinates
 #calculations.get_cartesian(data, ra='ra', dec='dec', pmra='pmra', pmde='pmdec', radial_velocity='RV', frame='icrs')
 calculations.get_cartesian(data, glon='GLON', glat='GLAT', pmra='pmra', pmde='pmdec', radial_velocity='RV', frame='icrs')
 
-# %
 data
 
-# %
 #setting dcalc
 #setting metadata for dcalc
 #since we calculate distance only using parallax in this dataset, dcalc is always 2
@@ -115,7 +107,6 @@ data['dcalc'] = data.Column(data=[2]*len(data),
                             meta=collections.OrderedDict([('ucd', 'meta.dcalc')]),
                             description='Distance Indicator: 1 indicates a Bailer-Jones photogeometric distance; 2 indicates a Bailer-Jones geometric distance')
 
-# %
 #calculating absolute magnitudes
 #calculate absolute V mag based on apparent magnitude and distance
 data['appmag'] = data.MaskedColumn(data=data['Gmag'],
@@ -129,7 +120,6 @@ data['absmag'] = data.MaskedColumn(data=[data['appmag'][i]+5-5*np.log10(data['di
                              format='{:.6f}',
                              description='Absolute magnitude in Gaia G-band')
 
-# %
 #calculate luminosity based on absolute magnitude
 data['lum'] = [10**(1.89 - 0.4*data['absmag'][i]) for i in range(len(data))]
 small_luminosities = np.where((data['lum']>0.0) & (data['lum']<0.001))[0]
@@ -141,7 +131,6 @@ data['lum'] = data.MaskedColumn(data=data['lum'],
                              format='{:.6f}',
                              description='Stellar Luminosity')
 
-# %
 #setting color and visualizing
 data['color'] = data.MaskedColumn(data=data['bp_g'],
                              unit=u.solLum,
@@ -150,7 +139,6 @@ data['color'] = data.MaskedColumn(data=data['bp_g'],
                              description='Gaia BP-G color')
 plt.hist(data['color'], bins=10)
 
-# %
 #2D Visualization
 fig, ax = plt.subplots(1, 2)
 
@@ -167,13 +155,10 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 plt.show
 
-# %
 data['error_over_parallax']=[data['e_Plx'][i]/data['Plx'][i] for i in range(len(data))]
 
-# %
 len(data[data['error_over_parallax']>0.2])
 
-# %
 #construct a speck comment column
 data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['GaiaDR3']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
@@ -182,39 +167,28 @@ data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['GaiaDR
 #construct a label column
 data['label'] = ['GaiaDR3_'+ str(source) for source in data['GaiaDR3']]  #leaving for now in case we want to add other labels
 
-# %
 #setting texture number column
 data['texnum'] = data.Column(data=[1]*len(data), 
                                   meta=collections.OrderedDict([('ucd', 'meta.texnum')]),
                                   description='Texture Number')
 
-# %
 #Getting the column metadata
 columns = file_functions.get_metadata(data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'tphmed', 'dphmed', 'vphmed', 'speck_label'])
 columns
 
-# %
 # Print the csv file using the to_csv function in file_functions
 file_functions.to_csv(metadata, Table.to_pandas(data), columns)
 
-# %
 # Print the speck file using the to_speck function in file_functions
 file_functions.to_speck(metadata, Table.to_pandas(data), columns)
 
-# %
 # Print the label file using the to_label function in file_functions
 file_functions.to_label(metadata, Table.to_pandas(data))
 
-# %
 from astropy.units import imperial
 
-# %
 min(data['dphmed'].quantity).to(imperial.mile)
 
-# %
 data[data['dphmed']<0.07]
 
-# %
 data
-
-print("done")

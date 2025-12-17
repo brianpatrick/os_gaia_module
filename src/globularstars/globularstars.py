@@ -1,15 +1,16 @@
-# %
 # PROCESS THE GLOBULAR CLUSTER STARS CATAOLOG:
 # https://zenodo.org/records/4891252
 #
 #
 # ZACK REEVES
 # CREATED: 2024
+# CADE MOHRHARDT
+# UPDATED: 2025
 #
 # VERSIONS:
 #  1.1  JAN 2024 CREATE JUPYTER NOTEBOOK
+#  Python 3.12.12 OCT 2025
 
-# %
 import pandas as pd
 import numpy as np
 import sys
@@ -30,7 +31,6 @@ from common import file_functions, calculations, gaia_functions, get_bailer_jone
 
 from matplotlib import pyplot as plt, colors
 
-# %
 # Define the metadata for the data set. #FIX LATER
 metadata = {}
 
@@ -43,7 +43,7 @@ metadata['catalog_year'] = '2021'
 metadata['catalog_doi'] = 'https://doi.org/10.5281/zenodo.4891252'
 metadata['catalog_bibcode'] = '10.5281/zenodo.4891252'
 
-metadata['prepared_by'] = 'Brian Abbott, Zack Reeves'
+metadata['prepared_by'] = 'Brian Abbott, Zack Reeves, Cade Mohrhardt'
 metadata['version'] = '1.1'
 
 metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
@@ -57,10 +57,8 @@ metadata['fileroot'] = 'globstars'
 file_functions.generate_license_file(metadata)
 file_functions.generate_asset_file(metadata)
 
-# %
 #download data from https://zenodo.org/records/4891252
 
-# %
 #reading in the data
 
 #data are downloaded in a .zip file.  Once extracted, the stars associated with each cluster are stored in folders
@@ -79,21 +77,18 @@ for file in tqdm(os.listdir(directory)):
         #reading in the table
         table = ascii.read(directory_str+filename)
         #adding a column with the cluster name
-        table['cluster_name'] = table.Column(data=[filename[:len(filename)-4]]*len(table),
+        table['cluster_name'] = table.Column(data=['# '+filename[:len(filename)-4]]*len(table),
                                              meta = collections.OrderedDict([('ucd', 'meta.name.cluster')]),
                                              description='Name of associated Globular Cluster')
         #adding table to array for stacking
         tables.append(table)
 
-# %
 #combining tables in tables array
 data = vstack(tables)
 data
 
-# %
 data['source_id'] = [int(i) for i in data['source_id']]
 
-# %
 #renaming columns 'x' and 'y' to not be confused with cartesian x and y and adding clarification
 data.rename_column('x', 'cluster_x')
 data['cluster_x'].description ='X coordinate centered on cluster'
@@ -108,25 +103,17 @@ data.remove_column('pmdec')
 data.remove_rows(np.where(data['plx']<=0.0)[0])
 data.remove_rows(np.where(data['memberprob']<0.5)[0])
 
-# %
-#data.write('gc.fits', overwrite=True)
-
-# %
-#data = Table.read('gc.fits')
-
-# %
 distances = get_bailer_jones.get_bj_distances(data, get_motion=True)
 
-# %
+
 data = join(data, distances, keys='source_id', join_type='left')
 data
 
-# %
+
 data['cluster_name'] = table.Column(data=data['cluster_name'],
                                          meta = collections.OrderedDict([('ucd', 'meta.name.cluster')]),
                                          description='Name of associated Globular Cluster')
 
-# %
 #fixing parallax units
 data['plx'].unit=u.mas
 
@@ -134,15 +121,12 @@ data['plx'].unit=u.mas
 data['ra'].unit=u.deg
 data['dec'].unit=u.deg
 
-# %
 #calculating distance in light years and parsecs
 calculations.get_distance(data, dist='bj_distance', use='distance')
 
-# %
 #calculating cartesian coordinates
 calculations.get_cartesian(data, ra='ra', dec='dec', pmra='pmra', pmde='pmdec', frame='icrs')
 
-# %
 #2D Visualization
 fig, ax = plt.subplots(1, 2)
 
@@ -159,7 +143,6 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 plt.show
 
-# %
 #2D Density Visualization
 fig, ax = plt.subplots(1, 2)
 
@@ -182,12 +165,10 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 #plt.show
 
-# %
 gaia_functions.get_magnitudes(data, gmag='g_mag')
 gaia_functions.get_luminosity(data)
 gaia_functions.get_bp_g_color(data, color='bp_rp')
 
-# %
 #construct a speck comment column
 data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['source_id']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
@@ -201,12 +182,10 @@ data['texnum'] = data.Column(data=[1]*len(data),
                                   meta=collections.OrderedDict([('ucd', 'meta.texnum')]),
                                   description='Texture Number')
 
-# %
 #Getting the column metadata
 columns = file_functions.get_metadata(data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'cluster_name', 'speck_label'])
 columns
 
-# %
 # Print the csv file using the to_speck function in file_functions
 file_functions.to_csv(metadata, Table.to_pandas(data), columns)
 
@@ -216,40 +195,36 @@ file_functions.to_speck(metadata, Table.to_pandas(data), columns)
 # Print the label file using the to_label function in file_functions
 file_functions.to_label(metadata, Table.to_pandas(data))
 
-# %
 cluster_names = unique(data, keys='cluster_name')['cluster_name']
 
-# %
 #for i in cluster_names:
 #    print(i)
 
-# %
 #the distances given for the stars in globular clusters are inaccurate due to local motions within the clusters
 #we disect the dataset back into its constituent clusters to artificially constrain the stars in each cluster to the hypothetical cluster radius
 
-# %
 from astroquery.vizier import Vizier
 # #reading in the catalogue
 catalog = Vizier(catalog='J/MNRAS/505/5978', columns=['**'], row_limit=-1).query_constraints()
 clusters = catalog[0]
 clusters
-# %
-# The table read in the commented out code in the previous cell usefully provides the mean parallaxes of each cluster
-# The cluster names in that table don't exactly match the ones we have, so the following table is a custom correlation table
+
+# The cluster names associated with our parallax data don't exactly match the ones we have, so the following table is a custom correlation table
+#the creation of a csv just to turn around and read that csv as a table is leftover code that could certainly be streamlined
 cluster_names_col = cluster_names.data
 clustable = Table.to_pandas(clusters)
 clustable = clustable.assign(cluster_names_col=cluster_names_col)
 clustable = clustable.rename(columns={'cluster_names_col': 'bonus_column'})
 clustable.to_csv("globclusters.csv", index=False, encoding='utf-8')
 clusters = Table.read('globclusters.csv')
-# %
+
 def angle_radius(rscale_theta, distance):
     return distance*np.tan(rscale_theta)
 
-# %
+
 import scipy.stats as stats
 
-# %
+
 cluster_dataframes=[]
 for i in tqdm(range(len(cluster_names))):
     cluster = cluster_names[i]
@@ -287,10 +262,9 @@ for i in tqdm(range(len(cluster_names))):
     calculations.get_cartesian(df, ra='ra', dec='dec', pmra='pmra', pmde='pmdec', frame='icrs')
     cluster_dataframes.append(df)
 
-# %
 adjusted_data = vstack(cluster_dataframes)
 
-# %
+
 #2D Visualization
 fig, ax = plt.subplots(1, 2)
 
@@ -307,7 +281,7 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 plt.show
 
-# %
+
 #2D Density Visualization
 fig, ax = plt.subplots(1, 2)
 
@@ -330,15 +304,12 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 #plt.show
 
-# %
 #Getting the column metadata
 columns = file_functions.get_metadata(adjusted_data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'cluster_name', 'speck_label'])
 columns
 
-# %
 adjusted_data
 
-# %
 # Print the csv file using the to_speck function in file_functions
 file_functions.to_csv(metadata, Table.to_pandas(adjusted_data), columns)
 
@@ -348,19 +319,8 @@ file_functions.to_speck(metadata, Table.to_pandas(adjusted_data), columns)
 # Print the label file using the to_label function in file_functions
 file_functions.to_label(metadata, Table.to_pandas(adjusted_data))
 
-# %
 max(adjusted_data['dist_pc'])
 
-# %
 adjusted_data[adjusted_data['dist_pc']>300000]
 
-# %
-1000/0.003
-
-# %
 clusters[clusters['bonus_column']=='NGC_2419']
-
-# %
-
-
-print("done")

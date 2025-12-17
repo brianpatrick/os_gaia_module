@@ -1,4 +1,3 @@
-# %
 # PROCESS THE GAIA CATALOG OF SOlAR ANALOGUES:
 # Gaia has astrophysical parameters which can be used to find stars similar to the Sun
 # Based on https://ui.adsabs.harvard.edu/abs/2023A%26A...674A..39G/abstract , we use Teff, logg, and M/H to find solar analogues
@@ -6,11 +5,13 @@
 #
 # ZACK REEVES
 # CREATED: 2024
+# CADE MOHRHARDT
+# UPDATED: 2025
 #
 # VERSIONS:
 #  1.1  JUN 2024 CREATE JUPYTER NOTEBOOK
+#  Python 3.12.12 OCT 2025
 
-# %
 import pandas as pd
 import numpy as np
 import sys
@@ -29,7 +30,6 @@ from common import file_functions, calculations, gaia_functions
 
 from matplotlib import pyplot as plt, colors
 
-# %
 # Define the metadata for the data set.  NEED TO EDIT
 #https://ui.adsabs.harvard.edu/abs/2023A%26A...674A..39G/abstract
 metadata = {}
@@ -43,7 +43,7 @@ metadata['catalog_year'] = '2023'
 metadata['catalog_doi'] = 'doi:10.1051/0004-6361/202243800'
 metadata['catalog_bibcode'] = '2023A&A...674A..39G'
 
-metadata['prepared_by'] = 'Brian Abbott, Zack Reeves'
+metadata['prepared_by'] = 'Brian Abbott, Zack Reeves, Cade Mohrhardt'
 metadata['version'] = '1.1'
 
 metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
@@ -57,7 +57,6 @@ metadata['fileroot'] = 'solar_twins'
 file_functions.generate_license_file(metadata)
 file_functions.generate_asset_file(metadata)
 
-# %
 #query Gaia
 
 #based on the paper, we want to find stars with teff, logg, and M/H within reasonable error of the Sun's
@@ -94,28 +93,20 @@ Gaia.remove_jobs(job.jobid)
 
 Gaia.logout()
 
-# %
 data
 
-# %
 gaia_functions.set_bj_distance(data)
 
-# %
 calculations.get_distance(data, dist='bj_distance', use='distance')
 
-# %
 calculations.get_cartesian(data)
 
-# %
 gaia_functions.get_magnitudes(data)
 
-# %
 gaia_functions.get_luminosity(data)
 
-# %
 gaia_functions.get_bp_g_color(data)
 
-# %
 #2D Visualization
 fig, ax = plt.subplots(1, 2)
 
@@ -132,7 +123,6 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 plt.show
 
-# %
 #2D Density Visualization
 fig, ax = plt.subplots(1, 2)
 
@@ -155,7 +145,6 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 #plt.show
 
-# %
 #construct a speck comment column
 data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['SOURCE_ID']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
@@ -164,30 +153,20 @@ data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['SOURCE
 #construct a label column
 data['label'] = ['GaiaDR3_'+ str(source) for source in data['SOURCE_ID']]  #leaving for now in case we want to add other labels
 
-# %
 #setting texture number column
 data['texnum'] = data.Column(data=[1]*len(data), 
                                   meta=collections.OrderedDict([('ucd', 'meta.texnum')]),
                                   description='Texture Number')
 
-# %
 #Getting the column metadata
 columns = file_functions.get_metadata(data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'speck_label'])
 columns
 
-# %
 # Print the csv file using the to_csv function in file_functions
 file_functions.to_csv(metadata, Table.to_pandas(data), columns)
 
-# %
 # Print the speck file using the to_speck function in file_functions
 file_functions.to_speck(metadata, Table.to_pandas(data), columns)
 
-# %
 # Print the label file using the to_label function in file_functions
 file_functions.to_label(metadata, Table.to_pandas(data))
-
-# %
-
-
-print("done")

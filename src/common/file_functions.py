@@ -337,7 +337,7 @@ def generate_asset_file(metadata, RenderableType="RenderableStars", path = "/Mil
     print('})\n', file=out)
 
     #print data file arguments
-    print('local data_file = asset.resource(\"'+fileroot+'.csv\")', file=out)
+    print('local data_file = asset.resource(\"'+fileroot+'.speck\")', file=out)
 #     print('local speck_file = asset.resource(\"'+fileroot+'.speck\")', file=out)
 #     print('local label_file = asset.resource(\"'+fileroot+'.label\")', file=out)
 
@@ -448,7 +448,7 @@ def generate_asset_file(metadata, RenderableType="RenderableStars", path = "/Mil
     print('  Name = \"'+object_name+'\",', file=out)
     print('  Version = \"1.0\",', file=out)
     print('  Description = \"'+metadata['data_group_desc']+'\",', file=out)
-    print('  Author = \"Brian Abbott (AMNH), Zack Reeves\",', file=out)
+    print('  Author = \"Brian Abbott (AMNH), Zack Reeves, Cade Mohrhardt\",', file=out)
     print('  URL = \"https://www.amnh.org/research/hayden-planetarium/digital-universe\",', file=out)
     print('  License = \"AMNH Digital Universe\"', file=out)
     print('}', file=out)

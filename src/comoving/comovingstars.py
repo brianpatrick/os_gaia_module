@@ -94,16 +94,15 @@ file_functions.generate_asset_file(metadata)
 #binaries = binaries_table[['source_id1', 'source_id2', 'ra1', 'ra2', 'dec1', 'dec2', 'parallax1', 'parallax2', 'parallax_error1', 'parallax_error2', 'pmra1', 'pmra2', 'pmdec1', 'pmdec2', 'dr2_radial_velocity1', 'dr2_radial_velocity2', 'phot_g_mean_mag1', 'phot_g_mean_mag2', 'bp_rp1', 'bp_rp2']]
 
 #pares the table down to just the columns we want
-#this line currently works with a downloaded .fits.gz file, it may need to be adjusted once the query is working
+#this line currently works with a downloaded .fits.gz file
 binaries = Table.read('all_columns_catalog.fits.gz')[['source_id1', 'source_id2', 'ra1', 'ra2', 'dec1', 'dec2', 'parallax1', 'parallax2', 'parallax_error1', 'parallax_error2', 'pmra1', 'pmra2', 'pmdec1', 'pmdec2', 'dr2_radial_velocity1', 'dr2_radial_velocity2', 'phot_g_mean_mag1', 'phot_g_mean_mag2', 'bp_rp1', 'bp_rp2']]
-#This line may work when pulling from the el_badry code
+#This line works when pulling from the el_badry code
 #binaries = Table.read('binary_catalog.fits')[['source_id1', 'source_id2', 'ra1', 'ra2', 'dec1', 'dec2', 'parallax1', 'parallax2', 'parallax_error1', 'parallax_error2', 'pmra1', 'pmra2', 'pmdec1', 'pmdec2', 'dr2_radial_velocity1', 'dr2_radial_velocity2', 'phot_g_mean_mag1', 'phot_g_mean_mag2', 'bp_rp1', 'bp_rp2']]
 
 #only uncomment this for testing and debugging, we need the whole dataset 
 #binaries = binaries[:1000]
 
 binaries
-print("houston we have the data")
 # 
 #creating a table for the primary stars in the system
 data_1 = binaries[['source_id1', 'ra1', 'dec1', 'parallax1', 'parallax_error1', 'pmra1', 'pmdec1', 'dr2_radial_velocity1', 'phot_g_mean_mag1', 'bp_rp1']]
@@ -128,7 +127,6 @@ data = vstack([data_1, data_2])
 
 # 
 data
-print("about to start calculating. buckle up")
 # 
 #calculating distance in light years and parsecs
 #this dataset only uses gaia parallaxes to calculate distance to avoid the cpmutational expense of uploading >3 million stars to grab BJ distances
@@ -142,7 +140,7 @@ data['dcalc'] = data.Column([3]*len(data),
 # 
 #calculating cartesian coordinates
 calculations.get_cartesian(data, ra='ra', dec='dec', pmra='pmra', pmde='pmdec', radial_velocity='dr2_radial_velocity', frame='icrs')
-print("about to start plotting")
+
 # 
 #2D Visualization
 fig, ax = plt.subplots(1, 2)
@@ -182,7 +180,6 @@ ax[1].set_title('XZ Plane')
 fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 #plt.show
-print("last step, making some files now")
 # 
 # data quality test
 data['error_over_parallax']=[data['parallax_error'][i]/data['parallax'][i] for i in range(len(data))]
@@ -224,6 +221,3 @@ file_functions.to_label(metadata, Table.to_pandas(data))
 # 
 # Print the csv file using the to_csv function in file_functions
 file_functions.to_csv(metadata, Table.to_pandas(data), columns)
-
-
-print("done")

@@ -1,37 +1,38 @@
 
-### Working as .py file without needing downloaded data
+### Working as .py file
 -chemistry
+-Comoving (data: all_columns_catalog.fits.gz)
 -dGal
+-dr3rv (1763156354433O-result.vot.gz)
 -gcns
 -giants
+-globularstars (data: clusters folder)
 -nearencounters
 -openclusters
 -solartwins
+-stellarclusters (data: UCC_cat.csv.gz)
 -variablestars
 -youngstars
 
 
-### Working as .py file but needs downloaded data (downloaded data should be in the folder with it)
--Comoving (data: all_columns_catalog.fits.gz) ISSUE: doing a query requires some fixes to the el_badry files
--globularstars (data: clusters folder)
--stellarclusters (data: UCC_cat.csv.gz)
-
-
-### Converted to .py files, still working out some kinks
--dr3rv ISSUE: Memory error in trying to read the fits file. 
-                This may work on a more powerful machine, as querying gaia using TOP 1000 makes it all work.
-
+### Visibility of Data in openspace
+-chemistry (GOOD)
+-comoving (GOOD)
+-dGal (GOOD?, too dim)
+-dr3rv (GOOD)
+-gcns (GOOD)
+-giants (GOOD)
+-globularstars (INVISIBILE)
+-nearencounters (GOOD)
+-openclusters (GOOD, change the color)
+-solartwins (GOOD)
+-stellarclusters (GOOD, change the color diff from openclusters)
+-variablestars (GOOD)
+-youngstars (GOOD)
 
 
 to do list:
--dr3rv currently downloading, test it once it's downloaded
--comoving make sure the query works (all_columns_catalog.fitz.gz)
--make sure everything is well commented, add my name to things
-
-
-### Commented and credited
--chemistry
-- 92-100 Comoving, delete some of that, or change it to if statements
--dGal
--gcns
--
+-dGal is too dim, crank the luminosity (might work, run the code and then test it)
+-globstars has text in the speck file ('cluster_name' row) which needs to be moved to after a comment (might work, run the code and then test it)
+-openclusters change the color in the asset file manually
+-stellarclusters change the color in the asset file manually, different from openclusters

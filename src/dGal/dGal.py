@@ -50,8 +50,8 @@ metadata['raw_data_dir'] = ''
 
 metadata['data_group_title'] = 'dGal'
 metadata['data_group_desc'] = 'Nearby stars in the Milky Way mapped by Gaia'
-metadata['data_group_desc_long'] = 'Have you ever wondered what’s out there in space? Now, thanks to Gaia EDR3, the solar neighbourhood has been mapped with great precision out to 100 pc (326 light years)'
-metadata['fileroot'] = 'gcns'
+metadata['data_group_desc_long'] = 'Have you ever wondered what is out there in space? Now, thanks to Gaia EDR3, the solar neighbourhood has been mapped with great precision out to 100 pc (326 light years)'
+metadata['fileroot'] = 'dGal'
 
 file_functions.generate_license_file(metadata)
 file_functions.generate_asset_file(metadata)
@@ -149,6 +149,8 @@ data['absmag'] = data.MaskedColumn(data=[data['appmag'][i]+5-5*np.log10(data['di
 data['lum'] = [10**(1.89 - 0.4*data['absmag'][i]) for i in range(len(data))]
 small_luminosities = np.where((data['lum']>0.0) & (data['lum']<0.001))[0]
 data['lum'][small_luminosities] = [0.001]*len(small_luminosities)
+#Luminosity is artificially increased so it is more visible in OpenSpace
+data['lum'] = data['lum'] * 2000
 
 data['lum'] = data.MaskedColumn(data=data['lum'],
                              unit=u.solLum,

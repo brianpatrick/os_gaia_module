@@ -1,4 +1,3 @@
-# %
 # PROCESS THE GAIA CATALOG OF VARIABLE STARS:
 # Gaia has a table for RR Lyrae stars and Cepheid variables
 # gaiadr3.vari_rrlyrae & gaiadr3.vari_cepheid
@@ -6,11 +5,13 @@
 #
 # ZACK REEVES
 # CREATED: 2024
+# CADE MOHRHARDT
+# UPDATED: 2025
 #
 # VERSIONS:
 #  1.1  MAR 2024 CREATE JUPYTER NOTEBOOK
+#  Python 3.12.12 OCT 2025
 
-# %
 import pandas as pd
 import numpy as np
 import sys
@@ -29,7 +30,6 @@ from common import file_functions, calculations
 
 from matplotlib import pyplot as plt, colors
 
-# %
 # Define the metadata for the data set.  NEED TO EDIT
 #https://www.aanda.org/articles/aa/full_html/2023/06/aa43964-22/aa43964-22.html
 metadata = {}
@@ -43,7 +43,7 @@ metadata['catalog_year'] = '2021'
 metadata['catalog_doi'] = 'doi:10.1051/0004-6361/202039498'
 metadata['catalog_bibcode'] = '2021A&A...649A...6G'
 
-metadata['prepared_by'] = 'Brian Abbott, Zack Reeves'
+metadata['prepared_by'] = 'Brian Abbott, Zack Reeves, Cade Mohrhardt'
 metadata['version'] = '1.1'
 
 metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
@@ -56,7 +56,7 @@ metadata['fileroot'] = 'variable_stars'
 
 file_functions.generate_license_file(metadata)
 file_functions.generate_asset_file(metadata)
-# %
+
 #query cepheid table
 
 #log in to Gaia Server - Can change to different credentials file for a different user
@@ -81,7 +81,6 @@ Gaia.remove_jobs(job.jobid)
 
 Gaia.logout()
 
-# %
 #query RR Lyrae table
 
 #log in to Gaia Server - Can change to different credentials file for a different user
@@ -106,17 +105,14 @@ Gaia.remove_jobs(job.jobid)
 
 Gaia.logout()
 
-# %
 rrls
 
-# %
 data = vstack([cepheids, rrls])
 data['variable_type'] = data.Column(data['variable_type'],
                             meta=collections.OrderedDict([('ucd', 'meta.vari_type')]),
                             description='Type of Variable Star: 1 indicates Cepheid, 2 indicates RR Lyrae')
 data
 
-# %
 #setting dcalc based on r_med_geo (if>500pc and photogeo exists, we choose photogeo and set dcalc to 1, else geo and dcalc to 2)
 data['dcalc'] = [1 if((not(np.ma.is_masked(data['r_med_photogeo'][i])))and(data['r_med_geo'][i]>500)) else 2 for i in range(len(data))]
 
@@ -132,19 +128,15 @@ data['bj_distance'].unit=u.pc
 #Choosing and calculating distance error based on the distance we chose
 data['e_bj_dist'] = [((data['r_hi_photogeo'][i]-data['r_lo_photogeo'][i])/2)*u.pc if((not(np.ma.is_masked(data['r_med_photogeo'][i])))and(data['r_med_geo'][i]>500)) else ((data['r_hi_geo'][i]-data['r_lo_geo'][i])/2)*u.pc for i in range(len(data))]
 
-# %
 #calculating distance in light years and parsecs
 calculations.get_distance(data, dist='bj_distance', use='distance')
 
-# %
 #dropping stars with null distance
 data.remove_rows([i for i in range(len(data)) if np.ma.is_masked(data['bj_distance'][i])])
 
-# %
 #calculating cartesian coordinates
 calculations.get_cartesian(data, ra='ra', dec='dec', pmra='pmra', pmde='pmdec', radial_velocity='radial_velocity', frame='icrs')
 
-# %
 #calculating absolute magnitudes
 #calculate absolute V mag based on apparent magnitude and distance
 data['appmag'] = data.MaskedColumn(data=data['phot_g_mean_mag'],
@@ -158,7 +150,6 @@ data['absmag'] = data.MaskedColumn(data=[data['appmag'][i]+5-5*np.log10(data['di
                              format='{:.6f}',
                              description='Absolute magnitude in Gaia G-band')
 
-# %
 #calculate luminosity based on absolute magnitude
 data['lum'] = [10**(1.89 - 0.4*data['absmag'][i]) for i in range(len(data))]
 small_luminosities = np.where((data['lum']>0.0) & (data['lum']<0.001))[0]
@@ -170,7 +161,6 @@ data['lum'] = data.MaskedColumn(data=data['lum'],
                              format='{:.6f}',
                              description='Stellar Luminosity')
 
-# %
 #setting color and visualizing
 data['color'] = data.MaskedColumn(data=data['bp_g'],
                              unit=u.solLum,
@@ -179,7 +169,6 @@ data['color'] = data.MaskedColumn(data=data['bp_g'],
                              description='Gaia BP-G color')
 plt.hist(data['color'], bins=250)
 
-# %
 #2D Visualization
 fig, ax = plt.subplots(1, 2)
 
@@ -196,7 +185,6 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 plt.show
 
-# %
 #2D Visualization
 fig, ax = plt.subplots(1, 2)
 
@@ -216,7 +204,6 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 plt.show
 
-# %
 #2D Density Visualization
 fig, ax = plt.subplots(1, 2)
 
@@ -239,7 +226,6 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 #plt.show
 
-# %
 #construct a speck comment column
 data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['SOURCE_ID']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
@@ -248,33 +234,22 @@ data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['SOURCE
 #construct a label column
 data['label'] = ['GaiaDR3_'+ str(source) for source in data['SOURCE_ID']]  #leaving for now in case we want to add other labels
 
-# %
 #setting texture number column
 data['texnum'] = data.Column(data=[1]*len(data), 
                                   meta=collections.OrderedDict([('ucd', 'meta.texnum')]),
                                   description='Texture Number')
 
-# %
 #Getting the column metadata
 columns = file_functions.get_metadata(data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'variable_type', 'speck_label'])
 columns
 
-# %
 # Print the csv file using the to_csv function in file_functions
 file_functions.to_csv(metadata, Table.to_pandas(data), columns)
 
-# %
 # Print the speck file using the to_speck function in file_functions
 file_functions.to_speck(metadata, Table.to_pandas(data), columns)
 
-# %
 # Print the label file using the to_label function in file_functions
 file_functions.to_label(metadata, Table.to_pandas(data))
 
-# %
 data[data['SOURCE_ID']==4685634433183799680]
-
-# %
-
-
-print("done")

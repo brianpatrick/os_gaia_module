@@ -1,15 +1,16 @@
-# %
 # PROCESS THE GAIA DR3 RADIAL VELOCITY CATALOG:
 # https://gea.esac.esa.int/archive/
 #
 #
 # ZACK REEVES
 # CREATED: 2024
+# CADE MOHRHARDT
+# UPDATED: 2025
 #
 # VERSIONS:
 #  1.1  MAR 2024 CREATE JUPYTER NOTEBOOK
+#  Python 3.12.12 OCT 2025
 
-# %
 # **STEPS TO RUN THIS CODE**
 
 # There are two queries you can run to generate this catalog
@@ -25,13 +26,11 @@
 # If any errors occur, consider slicing the data down to the first 1000 rows (data[:1000]) to debug
 # Can also add "select TOP 1000" to the query to grab 1000 stars for testing
 
-# %
 #This code pulls a catalogue from Gaia DR3 of each star that has a reliable radial velocity
 #Based on https://www.aanda.org/articles/aa/full_html/2023/06/aa44220-22/aa44220-22.html#S14,
 #We correct radial velocities for stars of high magnitude grvs_mag>11 by Katz et al.
 #We also correct stars of high effective temperature 14500>rv_template_teff>8500 and 6>grvs_mag>12 by Blomme et al. as recommended by Katz^
 
-# %
 import pandas as pd
 import numpy as np
 import sys
@@ -51,7 +50,6 @@ from common import file_functions, calculations, gaia_functions
 
 from matplotlib import pyplot as plt, colors
 
-# %
 # Define the metadata for the data set. 
 metadata = {}
 
@@ -61,7 +59,7 @@ metadata['sub_project'] = 'Gaia DR3 Radial Velocities'
 metadata['catalog'] = 'Gaia Data Release 3: Properties and validation of the radial velocities (Katz et al., 2023)'
 metadata['catalog_author'] = 'Katz et al.'
 metadata['catalog_year'] = '2023'
-metadata['prepared_by'] = 'Zack Reeves (AMNH)'
+metadata['prepared_by'] = 'Zack Reeves (AMNH), Cade Mohrhardt (AMNH)'
 metadata['version'] = '1.1'
 
 metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
@@ -76,14 +74,13 @@ metadata['fileroot'] = 'gdr3rv'
 file_functions.generate_asset_file(metadata)
 file_functions.generate_license_file(metadata)
 
-# %
 #query the catalogue from Gaia
 #https://gea.esac.esa.int/archive/
 #The query pulls the source id, positional data, velocity data as well as teff and magnitude for correction purposes
 #corrective data included in the query was informed by https://www.aanda.org/articles/aa/full_html/2023/06/aa44220-22/aa44220-22.html#S14
 print("Which query would you like to run? type '1' or '2' for the queries, or '3' for a downloaded file")
 querytype = int(input())
-# %
+
 if querytype == 1:
     #QUERY #1 - 33 million stars
 
@@ -106,7 +103,7 @@ if querytype == 1:
 
     Gaia.logout()
 
-# %
+
 elif querytype == 2:
     #QUERY #2 - 29 million stars
 
@@ -131,38 +128,29 @@ elif querytype == 2:
 
 elif querytype == 3:
     #uncomment this if you are using downloaded data, keep it commented if you are trying to run from the query
-    data = Table.read('dr3rv_query_1_result.fits')
+    data = Table.read('1763156354433O-result.vot.gz')
 
-print("data acquired")
-
-# %
+print("data read")
 data
 
-# %
 gaia_functions.set_bj_distance(data)
 
-# %
 data
 
-# %
 #calculating distance in light years and parsecs
 calculations.get_distance(data, dist='bj_distance', use='distance')
-print("calculations done")
-# %
+
 # data quality check
 data.remove_rows(np.where(data['dist_pc']<=0)[0])
 
-# %
 gaia_functions.get_magnitudes(data)
 
-# %
 gaia_functions.get_luminosity(data)
 
-# %
 gaia_functions.get_bp_g_color(data) #may want to change to bp_rp
 
-print("functions done")
-# %
+print("progress report on functions")
+
 # data check on the G mag
 x = data['phot_g_mean_mag']
 q25, q75 = np.percentile(x, [25, 75])
@@ -171,7 +159,6 @@ bins = round((x.max() - x.min()) / bin_width)
 print("Freedman–Diaconis number of bins:", bins)
 plt.hist(x, bins=bins);
 
-# %
 #applying corrections from papers
 data['radial_velocity_correction'] = [0.0]*len(data)
 
@@ -186,15 +173,13 @@ data['radial_velocity_correction'][blomme_indexes] = [7.98 - 1.135*data['grvs_ma
 data['corrected_radial_velocity'] = np.subtract(data['radial_velocity'], data['radial_velocity_correction'])
 data['corrected_radial_velocity'].unit=u.km/u.s
 
-# %
 #calculating cartesian coordinates
 calculations.get_cartesian(data, ra='ra', dec='dec', pmra='pmra', pmde='pmdec', radial_velocity='corrected_radial_velocity', frame='icrs')
 
-# %
+print("progress report 1")
+
 data
 
-print("all calculations done")
-# %
 #2D Visualization
 fig, ax = plt.subplots(1, 2)
 
@@ -211,9 +196,10 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 plt.show
 
-# %
 #2D Density Visualization
 fig, ax = plt.subplots(1, 2)
+
+print("progress report 2")
 
 #XY Plane
 ax[0].hist2d(data['x'], data['y'], 
@@ -234,7 +220,6 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 #plt.show
 
-# %
 #construct a speck comment column
 data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['SOURCE_ID']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
@@ -243,31 +228,20 @@ data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['SOURCE
 #construct a label column
 data['label'] = ['GaiaDR3_'+ str(source) for source in data['SOURCE_ID']]  #leaving for now in case we want to add other labels
 
-# %
 #setting texture number column
 data['texnum'] = data.Column(data=[1]*len(data), 
                                   meta=collections.OrderedDict([('ucd', 'meta.texnum')]),
                                   description='Texture Number')
 
-# %
 #Getting the column metadata
 columns = file_functions.get_metadata(data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'speck_label'])
 columns
 
-print("plots done")
-# %
 # Print the csv file using the to_csv function in file_functions
 file_functions.to_csv(metadata, Table.to_pandas(data), columns)
 
-# %
 # Print the speck file using the to_speck function in file_functions
 file_functions.to_speck(metadata, Table.to_pandas(data), columns)
 
-# %
 # Print the label file using the to_label function in file_functions
 file_functions.to_label(metadata, Table.to_pandas(data))
-
-# %
-
-
-

@@ -1,15 +1,15 @@
-# %
 # PROCESS THE OPEN CLUSTER CATAOLOG:
 # https://cdsarc.cds.unistra.fr/viz-bin/cat/J/A+A/673/A114
 #
 #
 # ZACK REEVES
 # CREATED: 2023
+# CADE MOHRHARDT
 #
 # VERSIONS:
 #  1.1  OCT 2023 CREATE JUPYTER NOTEBOOK
+#  Python 3.12.12 OCT 2025
 
-# %
 # Define the metadata for the data set. 
 metadata = {}
 
@@ -18,7 +18,7 @@ metadata['sub_project'] = 'Open Clusters'
 
 metadata['catalog'] = 'Improving the open cluster census. II. An all-sky cluster catalogue with Gaia DR3 (Hunt+, 2023)'
 metadata['catalog_author'] = 'Hunt+'
-metadata['prepared_by'] = 'Zack Reeves (AMNH)'
+metadata['prepared_by'] = 'Zack Reeves (AMNH), Cade Mohrhardt (AMNH)'
 metadata['catalog_year'] = '2023' #Cade added this, not sure if this is what the catalog_year refers to
 metadata['version'] = '1.1'
 
@@ -30,7 +30,6 @@ metadata['data_group_desc'] = 'Open Cluster catalog'
 metadata['data_group_desc_long'] = "placeholder so the code will run"
 metadata['fileroot'] = 'oc'
 
-# %
 import pandas as pd
 import numpy as np
 import sys
@@ -50,7 +49,6 @@ from common import file_functions, calculations
 import matplotlib.pyplot as plt
 
 file_functions.generate_asset_file(metadata)
-# %
 #Reading in the catalog with Vizier
 #We specify the row limit to make sure we get all the stars in the catalog
 #We place constraints on the Parallax and Probability of being a White Dwarf as a preliminary thresh
@@ -58,22 +56,18 @@ file_functions.generate_asset_file(metadata)
 catalog = Vizier(catalog='J/A+A/673/A114/clusters', columns=['**'], row_limit=-1).query_constraints(dist50='> 0.0')
 data = catalog[0]
 
-# %
+
 data
 
-# %
 #calculating distance in light years and parsecs
 calculations.get_distance(data, dist='dist50', use='distance')
 
-# %
 #calculating cartesian coordinates
 calculations.get_cartesian(data, ra='RA_ICRS', dec='DE_ICRS')
 
-# %
 #playing around with threshing on distance
 data.remove_rows(np.where(data['dist_pc']>20000)[0])
 
-# %
 #2D Visualization
 fig, ax = plt.subplots(1, 2)
 
@@ -90,7 +84,6 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 plt.show
 
-# %
 #construct a speck comment column
 data['speck_label'] = data.Column(data=['#__'+name for name in data['Name']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
@@ -99,21 +92,15 @@ data['speck_label'] = data.Column(data=['#__'+name for name in data['Name']],
 #construct a label column
 data['label'] = data['Name']  #leaving for now in case we want to add other labels
 
-# %
 #construct a metadata table
 columns = file_functions.get_metadata(data, columns=['x', 'y', 'z', 'dist_ly', 'N', 'r50', 'speck_label'])
 columns
 
-# %
 # Print the speck file using the to_speck function in file_functions
 file_functions.to_speck(metadata, Table.to_pandas(data), columns)
 
-# %
 # Print the label file using the to_label function in file_functions
 file_functions.to_label(metadata, Table.to_pandas(data))
 
-# %
+# Print the csv file using the to_csv function in file_functions
 file_functions.to_csv(metadata, Table.to_pandas(data), columns)
-
-
-print("done")

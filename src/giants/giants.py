@@ -1,4 +1,3 @@
-# %
 # PROCESS THE GAIA CATALOG OF RGB Stars:
 # https://ui.adsabs.harvard.edu/abs/2023ApJS..267....8A/abstract
 # https://zenodo.org/records/7945154
@@ -6,11 +5,13 @@
 #
 # ZACK REEVES
 # CREATED: 2024
+# CADE MOHRHARDT
+# UPDATED: 2025
 #
 # VERSIONS:
 #  1.1  JUN 2024 CREATE JUPYTER NOTEBOOK
+#  Python 3.12.12 OCT 2025
 
-# %
 import pandas as pd
 import numpy as np
 import sys
@@ -29,7 +30,6 @@ from common import file_functions, calculations, gaia_functions
 
 from matplotlib import pyplot as plt, colors
 
-# %
 # Define the metadata for the data set.  NEED TO EDIT
 #https://ui.adsabs.harvard.edu/abs/2023A%26A...674A..39G/abstract
 metadata = {}
@@ -43,7 +43,7 @@ metadata['catalog_year'] = '2023'
 metadata['catalog_doi'] = 'doi:10.3847/1538-4365/acd53e'
 metadata['catalog_bibcode'] = '2023ApJS..267....8A'
 
-metadata['prepared_by'] = 'Brian Abbott, Zack Reeves'
+metadata['prepared_by'] = 'Brian Abbott, Zack Reeves, Cade Mohrhardt'
 metadata['version'] = '1.1'
 
 metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
@@ -56,14 +56,12 @@ metadata['fileroot'] = 'giant'
 
 file_functions.generate_license_file(metadata)
 file_functions.generate_asset_file(metadata)
-print("asset file created")
-# %
+
 #download the data from https://zenodo.org/records/7945154 
 #~12 million stars
 data = Table.read('table_2_catwise.fits.gz')
 data
-print("data is read")
-# %
+
 #calculating distance in light years and parsecs
 #this dataset only uses gaia parallaxes to calculate distance to avoid the cpmutational expense of uploading >3 million stars to grab BJ distances
 
@@ -75,8 +73,7 @@ data['dcalc'] = data.Column([3]*len(data),
                             meta=collections.OrderedDict([('ucd', 'meta.dcalc')]),
                             description='Distance Indicator: 1 indicates a Bailer-Jones photogeometric distance; 2 indicates a Bailer-Jones geometric distance; 3 indicates a Gaia parallax-based distance')
 
-print("partway through calculations (7 min)")
-# %
+
 #setting necessary units and calculating galactic cartesian XYZ
 data['ra'].unit=u.deg
 data['dec'].unit=u.deg
@@ -85,28 +82,23 @@ data['pmdec'].unit=u.mas/u.yr
 data['radial_velocity'].unit=u.km/u.s
 calculations.get_cartesian(data, ra='ra', dec='dec', pmra='pmra', pmde='pmdec', radial_velocity='radial_velocity', frame='icrs')
 
-print("halfway through calulations (7 min)")
-# %
+
 #setting necessary units
 data['phot_g_mean_mag'].unit=u.mag
 data['phot_bp_mean_mag'].unit=u.mag
 data['phot_rp_mean_mag'].unit=u.mag
 
-# %
 #calculating absolute and apparent magnitudes, luminosity, and color
 gaia_functions.get_magnitudes(data)
 gaia_functions.get_luminosity(data)
 data['bp_rp'] = [data['phot_bp_mean_mag'][i]-data['phot_rp_mean_mag'][i] for i in range(len(data))]
 gaia_functions.get_bp_g_color(data, color='bp_rp')
 
-print("calculations done (4 min)")
-# %
+
 data
 
-# %
 plt.hist(data['bp_rp'], bins=250);
 
-# %
 #2D Visualization
 fig, ax = plt.subplots(1, 2)
 
@@ -123,7 +115,6 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 plt.show
 
-# %
 #2D Density Visualization
 fig, ax = plt.subplots(1, 2)
 
@@ -146,7 +137,6 @@ fig.tight_layout()
 fig.set_size_inches(10, 4, forward=True)
 #plt.show
 
-# %
 #construct a speck comment column
 data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['source_id']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
@@ -155,29 +145,20 @@ data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['source
 #construct a label column
 data['label'] = ['GaiaEDR3_'+ str(source) for source in data['source_id']]  #leaving for now in case we want to add other labels
 
-# %
 #setting texture number column
 data['texnum'] = data.Column(data=[1]*len(data), 
                                   meta=collections.OrderedDict([('ucd', 'meta.texnum')]),
                                   description='Texture Number')
 
-# %
 #Getting the column metadata
 columns = file_functions.get_metadata(data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'speck_label'])
 columns
 
-print("plots done (6 min)")
-# %
 # Print the csv file using the to_csv function in file_functions
 file_functions.to_csv(metadata, Table.to_pandas(data), columns)
 
-# %
 # Print the speck file using the to_speck function in file_functions
 file_functions.to_speck(metadata, Table.to_pandas(data), columns)
 
-# %
 # Print the label file using the to_label function in file_functions
 file_functions.to_label(metadata, Table.to_pandas(data))
-
-
-print("done")
