@@ -54,7 +54,7 @@ metadata['raw_data_dir'] = ''
 
 metadata['data_group_title'] = 'Chemistry'
 metadata['data_group_desc'] = 'Chemistry of stars in the Milky Way mapped by Gaia and measured by APOGEE/GALAH'
-metadata['data_group_desc_long'] = 'Have you ever wondered what’s out there in space? Now, thanks to Gaia EDR3, the solar neighbourhood has been mapped with great precision out to 100 pc (326 light years)'
+metadata['data_group_desc_long'] = 'Have you ever wondered what is out there in space? Now, thanks to Gaia EDR3, the solar neighbourhood has been mapped with great precision out to 100 pc (326 light years)'
 metadata['fileroot'] = 'chem'
 
 file_functions.generate_license_file(metadata)
@@ -136,7 +136,7 @@ query_data['twomass_id'] = query_data.Column(data=[str(query_data['twomass_id'][
                                                    description='2MASS ID')
 
 #Deleting table and job from Gaia ESA server so we don't clog the memory
-Gaia.delete_user_table('chemistry_stars')
+Gaia.delete_user_table(table_name="user_"+username+".chemistry_stars")
 Gaia.remove_jobs(job.jobid)
 
 Gaia.logout()

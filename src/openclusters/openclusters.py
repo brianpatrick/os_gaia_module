@@ -11,24 +11,31 @@
 #  Python 3.12.12 OCT 2025
 
 # Define the metadata for the data set. 
-metadata = {}
+PRINT_CENSUS = True
+GENERATE_ASSET_FILE = True
 
-metadata['project'] = 'Digital Universe Atlas'
-metadata['sub_project'] = 'Open Clusters'
+def generate_metadata():
+    metadata = {}
 
-metadata['catalog'] = 'Improving the open cluster census. II. An all-sky cluster catalogue with Gaia DR3 (Hunt+, 2023)'
-metadata['catalog_author'] = 'Hunt+'
-metadata['prepared_by'] = 'Zack Reeves (AMNH), Cade Mohrhardt (AMNH)'
-metadata['catalog_year'] = '2023' #Cade added this, not sure if this is what the catalog_year refers to
-metadata['version'] = '1.1'
+    metadata['project'] = 'Digital Universe Atlas'
+    metadata['sub_project'] = 'Open Clusters'
 
-metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
-metadata['raw_data_dir'] = ''
+    metadata['catalog'] = 'Improving the open cluster census. II. An all-sky cluster catalogue with Gaia DR3 (Hunt+, 2023)'
+    metadata['catalog_author'] = 'Hunt+'
+    metadata['prepared_by'] = 'Zack Reeves (AMNH), Cade Mohrhardt (AMNH)'
+    metadata['catalog_year'] = '2023' #Cade added this, not sure if this is what the catalog_year refers to
+    metadata['version'] = '1.1'
 
-metadata['data_group_title'] = 'Open Clusters'
-metadata['data_group_desc'] = 'Open Cluster catalog'
-metadata['data_group_desc_long'] = "placeholder so the code will run"
-metadata['fileroot'] = 'oc'
+    metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
+    metadata['raw_data_dir'] = ''
+
+    metadata['data_group_title'] = 'Open Clusters'
+    metadata['data_group_desc'] = 'Open Cluster catalog'
+    metadata['data_group_desc_long'] = "A catalog of stars from open clusters"
+    metadata['fileroot'] = 'oc'
+    return metadata
+
+metadata = generate_metadata()
 
 import pandas as pd
 import numpy as np
@@ -44,11 +51,11 @@ from astropy.table import Table
 from astroquery.vizier import Vizier
 
 sys.path.insert(0, '..')
-from common import file_functions, calculations
+from common import file_functions, calculations, asset_creation
 
 import matplotlib.pyplot as plt
 
-file_functions.generate_asset_file(metadata)
+#file_functions.generate_asset_file(metadata)
 #Reading in the catalog with Vizier
 #We specify the row limit to make sure we get all the stars in the catalog
 #We place constraints on the Parallax and Probability of being a White Dwarf as a preliminary thresh
@@ -104,3 +111,78 @@ file_functions.to_label(metadata, Table.to_pandas(data))
 
 # Print the csv file using the to_csv function in file_functions
 file_functions.to_csv(metadata, Table.to_pandas(data), columns)
+
+
+def asset_main():
+    """Generate the asset file for Gaia Stellar Clusters."""
+
+    datainfo = {
+        # Core script requirements
+        "renderable": "RenderablePolygonCloud",
+        "filename": metadata['fileroot'],
+        "Identifier": "GaiaOpenClusters",
+        "local_modules": True,
+        "asset_dir": "",
+        "Enabled": "true",
+        "name": "Gaia Open Clusters",
+        "data": {
+            "File": "oc.speck",
+            "Name": "Open Clusters Speck Files",
+            "Identifier": "gaia_openclusters_speck",
+            "Version": 3
+            },
+        "Texture": {
+            "File": "stars_textures"
+        },
+        
+        "local colormaps": """asset.resource({
+    Name = "Stars Color Table",
+    Type = "HttpSynchronization",
+    Identifier = "stars_colormap",
+    Version = 3
+})""",
+
+        "local textures": """asset.resource({
+    Name = "Stars Textures",
+    Type = "HttpSynchronization",
+    Identifier = "stars_textures",
+    Version = 1
+})""",
+
+        # Renderable Parameters
+        "opacity": 0.9,
+        "PolygonSides": "12",
+        "Unit": "pc",
+        "FixedColor": "0.80, 0.0, 0.50",
+        
+        # Label Settings
+        "labels": {
+            "file": "oc.label",
+            "color": "{ 0.0, 0.36, 0.14 }",
+            "size": 15.5,
+            "min_max": "{ 4, 30 }"
+        },
+        
+        # Size Settings
+        "ScaleExponent": "15.7",
+        "MaxSize": "23.0",
+        "enable_max_size": "true",
+
+        # GUI & Meta
+        "GUI": {
+        "Path": "/Milky Way/Star Clusters",
+        "Name": "Gaia Open Clusters",
+        "Description": "This is a large catalog containing 'Milky Way open clusters' using Gaia DR3 data.",
+        "url": "https://www.amnh.org/research/hayden-planetarium/digital-universe",
+        "license": "AMNH Gaia"
+        },
+        "meta_name": metadata['sub_project'],
+		"author": metadata['prepared_by']
+    }
+
+    # Generate the file using your internal utility
+    asset_creation.write_asset(datainfo)
+
+if __name__ == "__main__":
+    asset_main()
+    print("open clusters asset generated successfully.")

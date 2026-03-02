@@ -27,35 +27,42 @@ from astropy.table import unique, vstack, Table, join
 from astroquery.gaia import Gaia
 
 sys.path.insert(0, '..')
-from common import file_functions, calculations, gaia_functions, get_bailer_jones
+from common import file_functions, calculations, gaia_functions, get_bailer_jones, asset_creation
 
 from matplotlib import pyplot as plt, colors
 
+PRINT_CENSUS = True
+GENERATE_ASSET_FILE = True
+
 # Define the metadata for the data set. #FIX LATER
-metadata = {}
+def generate_metadata():
+    metadata = {}
 
-metadata['project'] = 'Digital Universe Atlas Gaia Subsets'
-metadata['sub_project'] = 'Gaia Stars in Globular Clusters'
+    metadata['project'] = 'Digital Universe Atlas Gaia Subsets'
+    metadata['sub_project'] = 'Gaia Stars in Globular Clusters'
 
-metadata['catalog'] = 'Catalogue of stars in Milky Way globular clusters from Gaia EDR3 (Vasiliev+, 2021)'
-metadata['catalog_author'] = 'Vasiliev+'
-metadata['catalog_year'] = '2021'
-metadata['catalog_doi'] = 'https://doi.org/10.5281/zenodo.4891252'
-metadata['catalog_bibcode'] = '10.5281/zenodo.4891252'
+    metadata['catalog'] = 'Catalogue of stars in Milky Way globular clusters from Gaia EDR3 (Vasiliev+, 2021)'
+    metadata['catalog_author'] = 'Vasiliev+'
+    metadata['catalog_year'] = '2021'
+    metadata['catalog_doi'] = 'https://doi.org/10.5281/zenodo.4891252'
+    metadata['catalog_bibcode'] = '10.5281/zenodo.4891252'
 
-metadata['prepared_by'] = 'Brian Abbott, Zack Reeves, Cade Mohrhardt'
-metadata['version'] = '1.1'
+    metadata['prepared_by'] = 'Brian Abbott, Zack Reeves, Cade Mohrhardt'
+    metadata['version'] = '1.1'
 
-metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
-metadata['raw_data_dir'] = ''
+    metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
+    metadata['raw_data_dir'] = ''
 
-metadata['data_group_title'] = 'Gaia Globular Cluster Stars'
-metadata['data_group_desc'] = 'Stars in the Milky Way identified to be members of globular clusters'
-metadata['data_group_desc_long'] = ''
-metadata['fileroot'] = 'globstars'
+    metadata['data_group_title'] = 'Gaia Globular Cluster Stars'
+    metadata['data_group_desc'] = 'Stars in the Milky Way identified to be members of globular clusters'
+    metadata['data_group_desc_long'] = ''
+    metadata['fileroot'] = 'globstars'
+    return metadata
+
+metadata = generate_metadata()
 
 file_functions.generate_license_file(metadata)
-file_functions.generate_asset_file(metadata)
+#file_functions.generate_asset_file(metadata)
 
 #download data from https://zenodo.org/records/4891252
 
@@ -174,6 +181,9 @@ data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['source
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
                                   description='Gaia EDR3 Source ID')
 
+data['speck_label'] = str(data['cluster_name'])+str(data['speck_label'])
+data.remove_column('cluster_name')
+
 #construct a label column
 data['label'] = ['GaiaEDR3_'+ str(source) for source in data['source_id']]  #leaving for now in case we want to add other labels
 
@@ -183,7 +193,7 @@ data['texnum'] = data.Column(data=[1]*len(data),
                                   description='Texture Number')
 
 #Getting the column metadata
-columns = file_functions.get_metadata(data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'cluster_name', 'speck_label'])
+columns = file_functions.get_metadata(data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'speck_label']) #add 'cluster_name' if it cannot be combined with 'speck_label'
 columns
 
 # Print the csv file using the to_speck function in file_functions
@@ -305,10 +315,10 @@ fig.set_size_inches(10, 4, forward=True)
 #plt.show
 
 #Getting the column metadata
-columns = file_functions.get_metadata(adjusted_data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'cluster_name', 'speck_label'])
+columns = file_functions.get_metadata(adjusted_data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'speck_label']) #add 'cluster_name' if it cannot be combined with 'speck_label'
 columns
 
-adjusted_data
+adjusted_data = adjusted_data
 
 # Print the csv file using the to_speck function in file_functions
 file_functions.to_csv(metadata, Table.to_pandas(adjusted_data), columns)
@@ -324,3 +334,78 @@ max(adjusted_data['dist_pc'])
 adjusted_data[adjusted_data['dist_pc']>300000]
 
 clusters[clusters['bonus_column']=='NGC_2419']
+
+
+def asset_main():
+    """Generate the asset file for Gaia Globular Clusters."""
+
+    datainfo = {
+        # Core script requirements
+        "renderable": "RenderablePolygonCloud",
+        "filename": metadata['fileroot'],
+        "Identifier": "GaiaGlobularClusters",
+        "local_modules": True,
+        "asset_dir": "",
+        "Enabled": "true",
+        "name": "Gaia Globular Clusters",
+        "data": {
+            "File": "globstars.speck",
+            "Name": "Globular Clusters Speck Files",
+            "Identifier": "gaia_globclusters_speck",
+            "Version": 3
+            },
+        "Texture": {
+            "File": "stars_textures"
+        },
+        
+        "local colormaps": """asset.resource({
+    Name = "Stars Color Table",
+    Type = "HttpSynchronization",
+    Identifier = "stars_colormap",
+    Version = 3
+})""",
+
+        "local textures": """asset.resource({
+    Name = "Stars Textures",
+    Type = "HttpSynchronization",
+    Identifier = "stars_textures",
+    Version = 1
+})""",
+
+        # Renderable Parameters
+        "opacity": 0.9,
+        "PolygonSides": "12",
+        "Unit": "pc",
+        "FixedColor": "0.80, 0.0, 0.50",
+        
+        # Label Settings
+        "labels": {
+            "file": "globstars.label",
+            "color": "{ 0.0, 0.36, 0.14 }",
+            "size": 15.5,
+            "min_max": "{ 4, 30 }"
+        },
+        
+        # Size Settings
+        "ScaleExponent": "15.7",
+        "MaxSize": "23.0",
+        "enable_max_size": "true",
+
+        # GUI & Meta
+        "GUI": {
+        "Path": "/Milky Way/Star Clusters",
+        "Name": "Gaia Globular Clusters",
+        "Description": "This is a large catalog containing 'Milky Way globular clusters' using Gaia DR3 data.",
+        "url": "https://www.amnh.org/research/hayden-planetarium/digital-universe",
+        "license": "AMNH Gaia"
+        },
+        "meta_name": metadata['sub_project'],
+		"author": metadata['prepared_by']
+    }
+
+    # Generate the file using your internal utility
+    asset_creation.write_asset(datainfo)
+
+if __name__ == "__main__":
+    asset_main()
+    print("globular clusters asset generated successfully.")

@@ -26,33 +26,40 @@ from astroquery.gaia import Gaia
 from astroquery.vizier import Vizier
 
 sys.path.insert(0, '..')
-from common import file_functions, calculations
+from common import file_functions, calculations, asset_creation
 
 from matplotlib import pyplot as plt, colors
 
+PRINT_CENSUS = True
+GENERATE_ASSET_FILE = True
+
 # Define the metadata for the data set. #FIX LATER
-metadata = {}
+def generate_metadata():  
+    metadata = {}
 
-metadata['project'] = 'Digital Universe Atlas Gaia Subsets'
-metadata['sub_project'] = 'Gaia Catalog of Nearby Stars'
+    metadata['project'] = 'Digital Universe Atlas Gaia Subsets'
+    metadata['sub_project'] = 'Gaia Catalog of Nearby Stars'
 
-metadata['catalog'] = 'The Gaia Catalogue of Nearby Stars (Gaia Collaboration, 2021)'
-metadata['catalog_author'] = 'Gaia Collaboration'
-metadata['catalog_year'] = '2021'
-metadata['catalog_doi'] = 'doi:10.1051/0004-6361/202039498'
-metadata['catalog_bibcode'] = '2021A&A...649A...6G'
+    metadata['catalog'] = 'The Gaia Catalogue of Nearby Stars (Gaia Collaboration, 2021)'
+    metadata['catalog_author'] = 'Gaia Collaboration'
+    metadata['catalog_year'] = '2021'
+    metadata['catalog_doi'] = 'doi:10.1051/0004-6361/202039498'
+    metadata['catalog_bibcode'] = '2021A&A...649A...6G'
 
-metadata['prepared_by'] = 'Brian Abbott, Zack Reeves, Cade Mohrhardt'
-metadata['version'] = '1.1'
+    metadata['prepared_by'] = 'Brian Abbott, Zack Reeves, Cade Mohrhardt'
+    metadata['version'] = '1.1'
 
-metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
-metadata['raw_data_dir'] = ''
+    metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
+    metadata['raw_data_dir'] = ''
 
-metadata['data_group_title'] = 'dGal'
-metadata['data_group_desc'] = 'Nearby stars in the Milky Way mapped by Gaia'
-metadata['data_group_desc_long'] = 'Have you ever wondered what is out there in space? Now, thanks to Gaia EDR3, the solar neighbourhood has been mapped with great precision out to 100 pc (326 light years)'
-metadata['fileroot'] = 'dGal'
+    metadata['data_group_title'] = 'dGal'
+    metadata['data_group_desc'] = 'Nearby stars in the Milky Way mapped by Gaia'
+    metadata['data_group_desc_long'] = 'Have you ever wondered what is out there in space? Now, thanks to Gaia EDR3, the solar neighbourhood has been mapped with great precision out to 100 pc (326 light years)'
+    metadata['fileroot'] = 'dGal'
 
+    return metadata
+
+metadata = generate_metadata()
 file_functions.generate_license_file(metadata)
 file_functions.generate_asset_file(metadata)
 
@@ -99,7 +106,7 @@ job = Gaia.launch_job_async("select a.GaiaEDR3, "
 data = join(data, job.get_results(), keys='GaiaEDR3', join_type='left')
 # data.remove_column('xhip_main_oid')
 #Deleting table and job from Gaia ESA server so we don't clog the memory
-Gaia.delete_user_table('d_gal')
+Gaia.delete_user_table(table_name="user_"+username+".d_gal")
 Gaia.remove_jobs(job.jobid)
 
 Gaia.logout()
@@ -232,7 +239,4 @@ file_functions.to_speck(metadata, Table.to_pandas(data), columns)
 
 # Print the label file using the to_label function in file_functions
 file_functions.to_label(metadata, Table.to_pandas(data))
-
-
-
 

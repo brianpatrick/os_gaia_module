@@ -84,7 +84,7 @@ job = Gaia.launch_job_async("select a.GaiaDR3, b.ra, b.dec, b.pmra, b.pmdec, bp_
 data = join(data, job.get_results(), keys='GaiaDR3', join_type='left')
 # data.remove_column('xhip_main_oid')
 #Deleting table and job from Gaia ESA server so we don't clog the memory
-Gaia.delete_user_table('near_encounters')
+Gaia.delete_user_table(table_name="user_"+username+".near_encounters")
 Gaia.remove_jobs(job.jobid)
 
 Gaia.logout()
@@ -160,7 +160,7 @@ data['error_over_parallax']=[data['e_Plx'][i]/data['Plx'][i] for i in range(len(
 len(data[data['error_over_parallax']>0.2])
 
 #construct a speck comment column
-data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['GaiaDR3']], 
+data['speck_label'] = data.Column(data=['"'+str(name)+'"' for name in data['GaiaDR3']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
                                   description='Gaia DR3 Source ID')
 

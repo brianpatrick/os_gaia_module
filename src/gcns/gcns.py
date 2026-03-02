@@ -54,25 +54,6 @@ metadata['fileroot'] = 'gcns'
 file_functions.generate_license_file(metadata)
 file_functions.generate_asset_file(metadata)
 
-# Define the metadata for the data set. ---- THIS IS OLD???
-# metadata = {}
-
-# metadata['project'] = 'Digital Universe Atlas Gaia Subsets'
-# metadata['sub_project'] = 'Gaia Catalog of Nearby Stars'
-
-# metadata['catalog'] = 'The Gaia Catalogue of Nearby Stars (Gaia Collaboration, 2021)'
-# metadata['author'] = 'Gaia Collaboration'
-# metadata['prepared_by'] = 'Zack Reeves (AMNH)'
-# metadata['version'] = '1.1'
-
-# metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
-# metadata['raw_data_dir'] = ''
-
-# metadata['data_group_title'] = 'GCNS'
-# metadata['data_group_desc'] = 'GCNS'
-# metadata['fileroot'] = 'gcns'
-
-
 #reading in the data
 #log in to Gaia Server - Can change to different credentials file for a different user
 Gaia.login(credentials_file='../common/gaia_credentials.txt')

@@ -1,5 +1,5 @@
 # 
-# PROCESS THE COMOVING STARS CATAOLOG:
+# PROCESS THE COMOVING STARS CATALOG:
 # https://zenodo.org/records/4435257
 # https://academic.oup.com/mnras/article/506/2/2269/6131876#
 #
