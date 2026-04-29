@@ -167,7 +167,7 @@ def to_speck(metadata, df, columns):
     # Print the data
     # We replace the '__' with a space because we add the '__' for spaces in the names and 
     # speck comment so that 
-    print(df_speck.to_csv(path_or_buf=None, sep=' ', na_rep='0', header=False, index=False, quoting=csv.QUOTE_NONE, quotechar="",  escapechar=" ", lineterminator='\n', float_format='%.8f').replace('__', ' '), file=out)
+    print(df_speck.to_csv(path_or_buf=None, sep=' ', na_rep='0', header=False, index=False, quoting=csv.QUOTE_NONE, quotechar='"',  escapechar=" ", lineterminator='\n', float_format='%.8f').replace('__', ' '), file=out)
 
 
 
@@ -214,7 +214,7 @@ def to_label(metadata, df):
 #     print(file=out)
 
     # Print the data
-    print(df_label.to_csv(path_or_buf=None, sep=' ', na_rep='0', header=False, index=False, quoting=csv.QUOTE_NONE, quotechar="",  escapechar=" ", lineterminator='\n', float_format='%.8f').replace('__', ' '), file=out)
+    print(df_label.to_csv(path_or_buf=None, sep=' ', na_rep='0', header=False, index=False, quoting=csv.QUOTE_NONE, quotechar='"',  escapechar=" ", lineterminator='\n', float_format='%.8f').replace('__', ' '), file=out)
 
 
 
