@@ -17,6 +17,7 @@ src/common/SciServer_credentials.txt
 **references/
 license_*.lua
 *.asset
+*.gz
 
 
 # Documentation build files
