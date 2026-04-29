@@ -1,0 +1,38 @@
+
+### Working as .py file
+-chemistry
+-Comoving (data: all_columns_catalog.fits.gz)
+-dGal
+-dr3rv (1763156354433O-result.vot.gz)
+-gcns
+-giants
+-globularstars (data: clusters folder)
+-nearencounters
+-openclusters
+-solartwins
+-stellarclusters (data: UCC_cat.csv.gz)
+-variablestars
+-youngstars
+
+
+### Visibility of Data in openspace
+-chemistry (GOOD)
+-comoving (GOOD)
+-dGal (GOOD?, too dim)
+-dr3rv (GOOD)
+-gcns (GOOD)
+-giants (GOOD)
+-globularstars (INVISIBILE)
+-nearencounters (GOOD)
+-openclusters (GOOD, change the color)
+-solartwins (GOOD)
+-stellarclusters (GOOD, change the color diff from openclusters)
+-variablestars (GOOD)
+-youngstars (GOOD)
+
+
+to do list:
+-dGal is too dim, crank the luminosity (might work, run the code and then test it)
+-globstars has text in the speck file ('cluster_name' row) which needs to be moved to after a comment (might work, run the code and then test it)
+-openclusters change the color in the asset file manually
+-stellarclusters change the color in the asset file manually, different from openclusters
