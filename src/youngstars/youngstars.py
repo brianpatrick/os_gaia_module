@@ -100,6 +100,10 @@ distances
 
 data = join(data, distances, keys='Source', join_type='inner')
 
+# Uncomment to download the query results to a csv
+#download = data.to_pandas()
+#download.to_csv('raw_data/youngstarsquery.csv', index=False)
+
 gaia_functions.set_bj_distance(data)
 
 # #fixing parallax units (Vizier labels it as a magnitude, probably meant milliarcseconds (mag versus mas))

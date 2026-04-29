@@ -1,38 +1,25 @@
-
-### Working as .py file
--chemistry
--Comoving (data: all_columns_catalog.fits.gz)
--dGal
--dr3rv (1763156354433O-result.vot.gz)
--gcns
--giants
--globularstars (data: clusters folder)
--nearencounters
--openclusters
--solartwins
--stellarclusters (data: UCC_cat.csv.gz)
--variablestars
--youngstars
+### Still IP
+-globularstars: Error is solved by eliminating "datavar 11 cluster_name   # Name of associated Globular Cluster" from the speck file. likely means that the two commented rows at the end need to be combined
+Warning: globstars is midway through a possible solution. both times Columns are assigned, (lines 196, 318) they are missing the 'cluster_name' column. This is because I'm trying to combine
+        that column with 'speck_label' so that there will only be one commented out column in the speck file. I believe having 2 commented out columns is what breaks it normally. 
+        It also maybe doesn't need the customized asset file at the end. 
 
 
-### Visibility of Data in openspace
--chemistry (GOOD)
--comoving (GOOD)
--dGal (GOOD?, too dim)
--dr3rv (GOOD)
--gcns (GOOD)
--giants (GOOD)
--globularstars (INVISIBILE)
--nearencounters (GOOD)
--openclusters (GOOD, change the color)
--solartwins (GOOD)
--stellarclusters (GOOD, change the color diff from openclusters)
--variablestars (GOOD)
--youngstars (GOOD)
 
+### Double Checked (+query result downloaded) "changes" reference since last git pull (4/29/26)
+**-chemistry (ERROR: Vizier timeout)
+-comoving (data from internet*) raw_data file root changed
+-dGal (query works, data from query downloaded) only change is the data downloading lines
+**-dr3rv
+-gcns (query works, data from query downloaded) only change is the data downloading lines
+**-giants (data from internet)
+**-globularstars
+-nearencounters (query works, data from query downloaded) only change is the data downloading lines
+-openclusters (query works, data from query downloaded) only change is the data downloading lines
+-solartwins (query works, data from query downloaded) changes are data downloading lines and making SOURCE_ID lowercase
+-stellarclusters (data from internet) no changes made
+-variablestars (query works, data from query downloaded) changes are data downloading lines and making SOURCE_ID lowercase
+-youngstars (query works, data from query downloaded) only change is the data downloading lines (and get_bailer_jones change)
 
-to do list:
--dGal is too dim, crank the luminosity (might work, run the code and then test it)
--globstars has text in the speck file ('cluster_name' row) which needs to be moved to after a comment (might work, run the code and then test it)
--openclusters change the color in the asset file manually
--stellarclusters change the color in the asset file manually, different from openclusters
+### Other files changed
+-get_bailer_jones (slight alteration to properly delete the created table)

@@ -23,7 +23,7 @@ def generate_metadata():
     metadata['catalog'] = 'Improving the open cluster census. II. An all-sky cluster catalogue with Gaia DR3 (Hunt+, 2023)'
     metadata['catalog_author'] = 'Hunt+'
     metadata['prepared_by'] = 'Zack Reeves (AMNH), Cade Mohrhardt (AMNH)'
-    metadata['catalog_year'] = '2023' #Cade added this, not sure if this is what the catalog_year refers to
+    metadata['catalog_year'] = '2023'
     metadata['version'] = '1.1'
 
     metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
@@ -63,6 +63,9 @@ import matplotlib.pyplot as plt
 catalog = Vizier(catalog='J/A+A/673/A114/clusters', columns=['**'], row_limit=-1).query_constraints(dist50='> 0.0')
 data = catalog[0]
 
+# Uncomment to download the query results to a csv
+#download = data.to_pandas()
+#download.to_csv('raw_data/ocquery.csv', index=False)
 
 data
 

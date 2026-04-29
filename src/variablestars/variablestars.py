@@ -108,6 +108,11 @@ Gaia.logout()
 rrls
 
 data = vstack([cepheids, rrls])
+
+# Uncomment to download the combined query results to a csv
+#download = data.to_pandas()
+#download.to_csv('raw_data/variablestarsqueries.csv', index=False)
+
 data['variable_type'] = data.Column(data['variable_type'],
                             meta=collections.OrderedDict([('ucd', 'meta.vari_type')]),
                             description='Type of Variable Star: 1 indicates Cepheid, 2 indicates RR Lyrae')
@@ -227,12 +232,12 @@ fig.set_size_inches(10, 4, forward=True)
 #plt.show
 
 #construct a speck comment column
-data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['SOURCE_ID']], 
+data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['source_id']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
                                   description='Gaia DR3 Source ID')
 
 #construct a label column
-data['label'] = ['GaiaDR3_'+ str(source) for source in data['SOURCE_ID']]  #leaving for now in case we want to add other labels
+data['label'] = ['GaiaDR3_'+ str(source) for source in data['source_id']]  #leaving for now in case we want to add other labels
 
 #setting texture number column
 data['texnum'] = data.Column(data=[1]*len(data), 
@@ -252,4 +257,4 @@ file_functions.to_speck(metadata, Table.to_pandas(data), columns)
 # Print the label file using the to_label function in file_functions
 file_functions.to_label(metadata, Table.to_pandas(data))
 
-data[data['SOURCE_ID']==4685634433183799680]
+data[data['source_id']==4685634433183799680]
