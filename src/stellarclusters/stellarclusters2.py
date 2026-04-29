@@ -72,12 +72,12 @@ file_functions.generate_license_file(metadata)
 
 #Reading data into Astropy Table
 
-#The catalog is downloaded from https://zenodo.org/records/10042028
-#The catalog that should be downloaded to view the 14,000 clusters is UCC_cat.csv.gz, 
+#The catalog is downloaded from https://zenodo.org/records/19712053
+#The catalog that should be downloaded to view the 18,000 clusters is UCC_cat.csv, 
 #the other catalog is the 1,300,000 stellar members
 data = pd.read_csv('UCC_cat.csv')
-#data = data[data['P_dup'] < 0.50]
 data = data[data['bad_oc'] == "n"]
+data = data[data['UTI'] > 0.1]
 data = Table.from_pandas(data)
 
 #view the data
@@ -134,20 +134,20 @@ calculations.get_cartesian(data, ra='RA_ICRS_m', dec='DE_ICRS_m')
 data.remove_rows(np.where(data['Dist_[kpc]']>20)[0])
 
 #2D Visualization
-fig, ax = plt.subplots(1, 2)
+#fig, ax = plt.subplots(1, 2)
 
 #XY Plane
-ax[0].scatter(data['x'], data['y'])
-ax[0].set_title('XY Plane')
+#ax[0].scatter(data['x'], data['y'])
+#ax[0].set_title('XY Plane')
 
 #XZ Plane
-ax[1].scatter(data['x'], data['z'])
-ax[1].set_title('XZ Plane')
+#ax[1].scatter(data['x'], data['z'])
+#ax[1].set_title('XZ Plane')
 
 #set good spacing
-fig.tight_layout()
-fig.set_size_inches(10, 4, forward=True)
-plt.show
+#fig.tight_layout()
+#fig.set_size_inches(10, 4, forward=True)
+#plt.show
 
 #construct a speck comment column
 data['speck_label'] = data.Column(data=['#__'+name for name in data['ID']], 
@@ -190,6 +190,13 @@ def asset_main():
         "Texture": {
             "File": "stars_textures"
         },
+                # Label Settings
+        "Labels": {
+            "File": "sc2.label",
+            "Color": "0.0, 0.36, 0.14",
+            "Size": "15.5",
+            "MinMaxSize": "4, 30"
+        },
         
         "local colormaps": """asset.resource({
     Name = "Stars Color Table",
@@ -210,14 +217,6 @@ def asset_main():
         "PolygonSides": "12",
         "Unit": "pc",
         "FixedColor": "0.0, 0.50, 0.50",
-        
-        # Label Settings
-        "labels": {
-            "file": "sc2.label",
-            "color": "{ 0.0, 0.36, 0.14 }",
-            "size": 15.5,
-            "min_max": "{ 4, 30 }"
-        },
         
         # Size Settings
         "ScaleExponent": "15.7",
