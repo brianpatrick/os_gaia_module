@@ -60,7 +60,7 @@ def generate_metadata():
     metadata['data_group_title'] = 'Stellar Clusters'
     metadata['data_group_desc'] = 'Stellar Cluster catalog'
     metadata['data_group_desc_long'] = 'This is a large catalog containing "Milky Way open clusters" using Gaia DR3 data.'
-    metadata['fileroot'] = 'sc'
+    metadata['fileroot'] = 'sc2'
     return metadata
 
 metadata = generate_metadata()
@@ -72,40 +72,43 @@ file_functions.generate_license_file(metadata)
 
 #Reading data into Astropy Table
 
-#The catalog is downloaded from https://zenodo.org/records/10042028
-#The catalog that should be downloaded to view the 14,000 clusters is UCC_cat.csv.gz, 
+#The catalog is downloaded from https://zenodo.org/records/19712053
+#The catalog that should be downloaded to view the 18,000 clusters is UCC_cat.csv, 
 #the other catalog is the 1,300,000 stellar members
-
-data = Table.from_pandas(pd.read_csv('UCC_cat.csv.gz'))
+data = pd.read_csv('raw_data/UCC_cat.csv')
+data = data[data['bad_oc'] == "n"]
+data = data[data['UTI'] > 0.1]
+data = Table.from_pandas(data)
 
 #view the data
 #print(data.columns)
+#print(data[:100])
 
 #setting units and metadata for important columns (ID, RA, DEC, parallax, N_50, r_50)
 
-data['ID'] = data.MaskedColumn(data=data['ID'], 
+data['ID'] = data.MaskedColumn(data=data['Name(s)'], 
                                meta = collections.OrderedDict([('ucd', 'meta.id')]),
                                description='Median parallax estimated using the selected members')
 
-data['RA_ICRS_m'] = data.MaskedColumn(data=data['RA_ICRS_m'], 
+data['RA_ICRS_m'] = data.MaskedColumn(data=data['RA_ICRS'], 
                                       unit=u.deg,
                                       meta = collections.OrderedDict([('ucd', 'pos.eq.ra')]),
                                       format='{:.6f}', 
                                       description='Median RA estimated using the selected members')
 
-data['DE_ICRS_m'] = data.MaskedColumn(data=data['DE_ICRS_m'], 
+data['DE_ICRS_m'] = data.MaskedColumn(data=data['DE_ICRS'], 
                                       unit=u.deg,
                                       meta = collections.OrderedDict([('ucd', 'pos.eq.de')]),
                                       format='{:.6f}', 
                                       description='Median DE estimated using the selected members')
 
-data['plx_m'] = data.MaskedColumn(data=data['plx_m'], 
+data['plx_m'] = data.MaskedColumn(data=data['Plx'], 
                                   unit=u.mas,
                                   meta = collections.OrderedDict([('ucd', 'pos.parallax.trig')]),
                                   format='{:.6f}', 
                                   description='Median parallax estimated using the selected members')
 
-data['N_50'] = data.MaskedColumn(data=data['N_50'], 
+data['N_50'] = data.MaskedColumn(data=data['N_membs'], 
                                  dtype=int,
                                  meta = collections.OrderedDict([('ucd', 'meta.number')]),
                                  description='Number of estimated members with P>0.5')
@@ -128,23 +131,23 @@ calculations.get_distance(data, parallax='plx_m', use='parallax')
 calculations.get_cartesian(data, ra='RA_ICRS_m', dec='DE_ICRS_m')
 
 #playing around with threshing on distance
-data.remove_rows(np.where(data['dist_pc']>20000)[0])
+data.remove_rows(np.where(data['Dist_[kpc]']>20)[0])
 
 #2D Visualization
-fig, ax = plt.subplots(1, 2)
+#fig, ax = plt.subplots(1, 2)
 
 #XY Plane
-ax[0].scatter(data['x'], data['y'])
-ax[0].set_title('XY Plane')
+#ax[0].scatter(data['x'], data['y'])
+#ax[0].set_title('XY Plane')
 
 #XZ Plane
-ax[1].scatter(data['x'], data['z'])
-ax[1].set_title('XZ Plane')
+#ax[1].scatter(data['x'], data['z'])
+#ax[1].set_title('XZ Plane')
 
 #set good spacing
-fig.tight_layout()
-fig.set_size_inches(10, 4, forward=True)
-plt.show
+#fig.tight_layout()
+#fig.set_size_inches(10, 4, forward=True)
+#plt.show
 
 #construct a speck comment column
 data['speck_label'] = data.Column(data=['#__'+name for name in data['ID']], 
@@ -173,19 +176,26 @@ def asset_main():
         # Core script requirements
         "renderable": "RenderablePolygonCloud",
         "filename": metadata['fileroot'],
-        "Identifier": "GaiaStellarClusters",
+        "Identifier": "GaiaStellarClusters2",
         "local_modules": True,
         "asset_dir": "",
         "Enabled": "true",
-        "name": "Gaia Stellar Clusters",
+        "name": "Gaia Stellar Clusters2",
         "data": {
-            "File": "sc.speck",
-            "Name": "Stellar Clusters Speck Files",
-            "Identifier": "gaia_stellarclusters_speck",
+            "File": "sc2.speck",
+            "Name": "Stellar Clusters Speck Files2",
+            "Identifier": "gaia_stellarclusters_speck2",
             "Version": 3
             },
         "Texture": {
             "File": "stars_textures"
+        },
+                # Label Settings
+        "Labels": {
+            "File": "sc2.label",
+            "Color": "0.0, 0.36, 0.14",
+            "Size": "15.5",
+            "MinMaxSize": "4, 30"
         },
         
         "local colormaps": """asset.resource({
@@ -208,14 +218,6 @@ def asset_main():
         "Unit": "pc",
         "FixedColor": "0.0, 0.50, 0.50",
         
-        # Label Settings
-        "labels": {
-            "file": "sc.label",
-            "color": "{ 0.0, 0.36, 0.14 }",
-            "size": 15.5,
-            "min_max": "{ 4, 30 }"
-        },
-        
         # Size Settings
         "ScaleExponent": "15.7",
         "MaxSize": "23.0",
@@ -224,7 +226,7 @@ def asset_main():
         # GUI & Meta
         "GUI": {
         "Path": "/Milky Way/Star Clusters",
-        "Name": "Gaia Stellar Clusters",
+        "Name": "Gaia Stellar Clusters2",
         "Description": "This is a large catalog containing 'Milky Way Stellar Clusters' using Gaia DR3 data.",
         "url": "https://www.amnh.org/research/hayden-planetarium/digital-universe",
         "license": "AMNH Gaia"
