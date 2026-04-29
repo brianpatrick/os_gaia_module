@@ -30,6 +30,7 @@ docs/build/
 # Environment
 .venv/
 .conda/
+.vscode/
 
 
 # Other OS-generated files
