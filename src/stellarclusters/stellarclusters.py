@@ -85,10 +85,9 @@ data = Table.from_pandas(data)
 #print(data[:100])
 
 #setting units and metadata for important columns (ID, RA, DEC, parallax, N_50, r_50)
-
-data['ID'] = data.MaskedColumn(data=data['Name(s)'], 
+data['ID'] = data.MaskedColumn(data=[str(name).split(';')[0].strip() for name in data['Name(s)']], 
                                meta = collections.OrderedDict([('ucd', 'meta.id')]),
-                               description='Median parallax estimated using the selected members')
+                               description='Cluster Names assigned by UCC')
 
 data['RA_ICRS_m'] = data.MaskedColumn(data=data['RA_ICRS'], 
                                       unit=u.deg,
@@ -131,7 +130,7 @@ calculations.get_distance(data, parallax='plx_m', use='parallax')
 calculations.get_cartesian(data, ra='RA_ICRS_m', dec='DE_ICRS_m')
 
 #playing around with threshing on distance
-data.remove_rows(np.where(data['Dist_[kpc]']>20)[0])
+data.remove_rows(np.where(data['dist_ly']>100000)[0])
 
 #2D Visualization
 #fig, ax = plt.subplots(1, 2)
@@ -149,8 +148,22 @@ data.remove_rows(np.where(data['Dist_[kpc]']>20)[0])
 #fig.set_size_inches(10, 4, forward=True)
 #plt.show
 
+#Replace a few cluster IDs with more common, better known names
+data['ID'][data['ID'] == 'Melotte 111'] = 'Coma'
+data['ID'][data['ID'] == 'Pleiades'] = 'M45 Pleiades'
+data['ID'][data['ID'] == 'NGC 6405'] = 'M6'
+data['ID'][data['ID'] == 'NGC 6475'] = 'M7'
+data['ID'][data['ID'] == 'NGC 6705'] = 'M11'
+data['ID'][data['ID'] == 'NGC 6613'] = 'M18'
+data['ID'][data['ID'] == 'NGC 6531'] = 'M21'
+data['ID'][data['ID'] == 'NGC 6494'] = 'M23'
+data['ID'][data['ID'] == 'IC 4725'] = 'M25'
+data['ID'][data['ID'] == 'NGC 6694'] = 'M26'
+data['ID'][data['ID'] == 'NGC 1039'] = 'M34'
+data['ID'][data['ID'] == 'NGC 2632'] = 'M44 Beehive'
+
 #construct a speck comment column
-data['speck_label'] = data.Column(data=['#__'+name for name in data['ID']], 
+data['speck_label'] = data.Column(data=['#  '+name for name in data['ID']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
                                  description='Object ID')
 
@@ -176,15 +189,15 @@ def asset_main():
         # Core script requirements
         "renderable": "RenderablePolygonCloud",
         "filename": metadata['fileroot'],
-        "Identifier": "GaiaStellarClusters2",
+        "Identifier": "GaiaStellarClusters",
         "local_modules": True,
         "asset_dir": "",
-        "Enabled": "true",
-        "name": "Gaia Stellar Clusters2",
+        "Enabled": "false",
+        "name": "Gaia Stellar Clusters",
         "data": {
             "File": "oc.speck",
-            "Name": "Stellar Clusters Speck Files2",
-            "Identifier": "gaia_stellarclusters_speck2",
+            "Name": "Stellar Clusters Speck Files",
+            "Identifier": "gaia_stellarclusters_speck",
             "Version": 3
             },
         "Texture": {
@@ -219,14 +232,14 @@ def asset_main():
         "FixedColor": "0.0, 0.50, 0.50",
         
         # Size Settings
-        "ScaleExponent": "15.7",
+        "ScaleExponent": "17.8",
         "MaxSize": "23.0",
         "enable_max_size": "true",
 
         # GUI & Meta
         "GUI": {
         "Path": "/Milky Way/Star Clusters",
-        "Name": "Gaia Stellar Clusters2",
+        "Name": "Gaia Stellar Clusters",
         "Description": "This is a large catalog containing 'Milky Way Stellar Clusters' using Gaia DR3 data.",
         "url": "https://www.amnh.org/research/hayden-planetarium/digital-universe",
         "license": "AMNH Gaia"
