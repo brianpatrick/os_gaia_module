@@ -95,7 +95,7 @@ file_functions.generate_asset_file(metadata)
 
 #pares the table down to just the columns we want
 #this line currently works with a downloaded .fits.gz file
-binaries = Table.read('all_columns_catalog.fits.gz')[['source_id1', 'source_id2', 'ra1', 'ra2', 'dec1', 'dec2', 'parallax1', 'parallax2', 'parallax_error1', 'parallax_error2', 'pmra1', 'pmra2', 'pmdec1', 'pmdec2', 'dr2_radial_velocity1', 'dr2_radial_velocity2', 'phot_g_mean_mag1', 'phot_g_mean_mag2', 'bp_rp1', 'bp_rp2']]
+binaries = Table.read('raw_data/all_columns_catalog.fits.gz')[['source_id1', 'source_id2', 'ra1', 'ra2', 'dec1', 'dec2', 'parallax1', 'parallax2', 'parallax_error1', 'parallax_error2', 'pmra1', 'pmra2', 'pmdec1', 'pmdec2', 'dr2_radial_velocity1', 'dr2_radial_velocity2', 'phot_g_mean_mag1', 'phot_g_mean_mag2', 'bp_rp1', 'bp_rp2']]
 #This line works when pulling from the el_badry code
 #binaries = Table.read('binary_catalog.fits')[['source_id1', 'source_id2', 'ra1', 'ra2', 'dec1', 'dec2', 'parallax1', 'parallax2', 'parallax_error1', 'parallax_error2', 'pmra1', 'pmra2', 'pmdec1', 'pmdec2', 'dr2_radial_velocity1', 'dr2_radial_velocity2', 'phot_g_mean_mag1', 'phot_g_mean_mag2', 'bp_rp1', 'bp_rp2']]
 

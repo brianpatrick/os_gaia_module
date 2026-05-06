@@ -111,6 +111,10 @@ Gaia.remove_jobs(job.jobid)
 
 Gaia.logout()
 
+# Uncomment to download the query results to a csv
+#download = data.to_pandas()
+#download.to_csv('raw_data/dGalquery.csv', index=False)
+
 
 data
 

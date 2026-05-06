@@ -93,6 +93,10 @@ Gaia.remove_jobs(job.jobid)
 
 Gaia.logout()
 
+# Uncomment to download the query results to a csv
+#download = data.to_pandas()
+#download.to_csv('raw_data/solartwinsquery.csv', index=False)
+
 data
 
 gaia_functions.set_bj_distance(data)
@@ -146,12 +150,12 @@ fig.set_size_inches(10, 4, forward=True)
 #plt.show
 
 #construct a speck comment column
-data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['SOURCE_ID']], 
+data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['source_id']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
                                   description='Gaia DR3 Source ID')
 
 #construct a label column
-data['label'] = ['GaiaDR3_'+ str(source) for source in data['SOURCE_ID']]  #leaving for now in case we want to add other labels
+data['label'] = ['GaiaDR3_'+ str(source) for source in data['source_id']]  #leaving for now in case we want to add other labels
 
 #setting texture number column
 data['texnum'] = data.Column(data=[1]*len(data), 

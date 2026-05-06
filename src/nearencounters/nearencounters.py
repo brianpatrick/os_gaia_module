@@ -87,6 +87,10 @@ data = join(data, job.get_results(), keys='GaiaDR3', join_type='left')
 Gaia.delete_user_table(table_name="user_"+username+".near_encounters")
 Gaia.remove_jobs(job.jobid)
 
+# Uncomment to download the query results to a csv
+#download = data.to_pandas()
+#download.to_csv('raw_data/nearencountersquery.csv', index=False)
+
 Gaia.logout()
 
 data

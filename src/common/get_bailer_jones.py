@@ -66,7 +66,7 @@ def get_bj_distances(data:Table, source_id='source_id', columns=None, get_motion
     distances.remove_column('gaia_ids_oid')
     
     #Deleting table and job from Gaia ESA server so we don't clog the memory
-    Gaia.delete_user_table(table_name = 'gaia_ids')
+    Gaia.delete_user_table(table_name = 'user_'+username+'.gaia_ids')
     Gaia.remove_jobs(job.jobid)
 
     Gaia.logout()
