@@ -46,13 +46,13 @@ def generate_metadata():
     metadata = {}
 
     metadata['project'] = 'Digital Universe Atlas'
-    metadata['sub_project'] = 'Stellar Clusters'
+    metadata['sub_project'] = 'Open Clusters'
 
     metadata['catalog'] = 'The Unified Cluster Catalogue: towards a comprehensive and homogeneous data base of stellar clusters (Perren+, 2023)'
     metadata['catalog_author'] = 'Perren+'
-    metadata['prepared_by'] = 'Zack Reeves (AMNH), Cade Mohrhardt (AMNH)'
+    metadata['prepared_by'] = 'Zack Reeves (AMNH), Cade Mohrhardt (AMNH), Brian Abbott (AMNH)'
     metadata['catalog_year'] = '2023'
-    metadata['version'] = '1.1'
+    metadata['version'] = '1.01'
 
     metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
     metadata['raw_data_dir'] = ''
@@ -60,7 +60,7 @@ def generate_metadata():
     metadata['data_group_title'] = 'Stellar Clusters'
     metadata['data_group_desc'] = 'Stellar Cluster catalog'
     metadata['data_group_desc_long'] = 'This is a large catalog containing "Milky Way open clusters" using Gaia DR3 data.'
-    metadata['fileroot'] = 'sc2'
+    metadata['fileroot'] = 'oc'
     return metadata
 
 metadata = generate_metadata()
@@ -77,7 +77,7 @@ file_functions.generate_license_file(metadata)
 #the other catalog is the 1,300,000 stellar members
 data = pd.read_csv('raw_data/UCC_cat.csv')
 data = data[data['bad_oc'] == "n"]
-data = data[data['UTI'] > 0.1]
+data = data[data['UTI'] > 0.3]
 data = Table.from_pandas(data)
 
 #view the data
@@ -182,7 +182,7 @@ def asset_main():
         "Enabled": "true",
         "name": "Gaia Stellar Clusters2",
         "data": {
-            "File": "sc2.speck",
+            "File": "oc.speck",
             "Name": "Stellar Clusters Speck Files2",
             "Identifier": "gaia_stellarclusters_speck2",
             "Version": 3
@@ -192,8 +192,8 @@ def asset_main():
         },
                 # Label Settings
         "Labels": {
-            "File": "sc2.label",
-            "Color": "0.0, 0.36, 0.14",
+            "File": "oc.label",
+            "Color": "0.05, 0.4, 0.2",
             "Size": "15.5",
             "MinMaxSize": "4, 30"
         },
