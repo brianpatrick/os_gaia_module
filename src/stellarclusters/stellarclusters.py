@@ -12,6 +12,17 @@
 #  1.1  OCT 2023 CREATE JUPYTER NOTEBOOK
 #  Python 3.12.12 OCT 2025
 
+
+
+#######
+#######
+#######  This code has been migrated to the DU repository for open clusters (May 2026).
+#######  CODE NO LONGER MAINTAINED HERE -- DO NOT EDIT THIS.
+#######
+#######
+
+
+
 import pandas as pd
 import numpy as np
 import sys
