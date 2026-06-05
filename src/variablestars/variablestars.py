@@ -1,122 +1,175 @@
 # PROCESS THE GAIA CATALOG OF VARIABLE STARS:
 # Gaia has a table for RR Lyrae stars and Cepheid variables
 # gaiadr3.vari_rrlyrae & gaiadr3.vari_cepheid
-#
-#
-# ZACK REEVES
-# CREATED: 2024
-# CADE MOHRHARDT
-# UPDATED: 2025
-#
-# VERSIONS:
+
+# Zack Reeves
+# Created: 2024
+# Edited by Cade Mohrhardt: 2026
+
+# Versions:
 #  1.1  MAR 2024 CREATE JUPYTER NOTEBOOK
-#  Python 3.12.12 OCT 2025
+#  1.02  MAY 2026 MODERNIZE CODE TO MATCH THE DIGITAL UNIVERSE
+
+#  Python 3.12.12
 
 import pandas as pd
 import numpy as np
 import sys
 import os
 import collections
-
 import astropy.units as u
 import astropy.coordinates
 from astropy.table import Table, join, vstack
 from astropy.io import ascii
-
 from astroquery.gaia import Gaia
-
-sys.path.insert(0, '..')
-from common import file_functions, calculations
-
 from matplotlib import pyplot as plt, colors
 
-# Define the metadata for the data set.  NEED TO EDIT
+sys.path.insert(0, '..')
+from common import file_functions, calculations, asset_creation
+
+
+GENERATE_SPECK = True
+GENERATE_ASSET_FILE = True
+READ_LOCAL_CATALOG = True
+
+
+# Define the metadata for the data set.
 #https://www.aanda.org/articles/aa/full_html/2023/06/aa43964-22/aa43964-22.html
-metadata = {}
+def generate_metadata():
+    metadata = {}
 
-metadata['project'] = 'Digital Universe Atlas Gaia Subsets'
-metadata['sub_project'] = 'Cepheid and RRLyrae Variable Stars'
+    metadata['project'] = 'Digital Universe Atlas Gaia Subsets'
+    metadata['sub_project'] = 'Cepheid and RRLyrae Variable Stars'
 
-metadata['catalog'] = 'The Gaia Catalogue of Nearby Stars (Gaia Collaboration, 2021)'  #need to edit
-metadata['catalog_author'] = 'Gaia Collaboration'
-metadata['catalog_year'] = '2021'
-metadata['catalog_doi'] = 'doi:10.1051/0004-6361/202039498'
-metadata['catalog_bibcode'] = '2021A&A...649A...6G'
+    metadata['catalog'] = 'The Gaia Catalogue of Nearby Stars (Gaia Collaboration, 2021)'  #need to edit
+    metadata['catalog_author'] = 'Gaia Collaboration'
+    metadata['catalog_year'] = '2021'
+    metadata['catalog_doi'] = 'doi:10.1051/0004-6361/202039498'
+    metadata['catalog_bibcode'] = '2021A&A...649A...6G'
 
-metadata['prepared_by'] = 'Brian Abbott, Zack Reeves, Cade Mohrhardt'
-metadata['version'] = '1.1'
+    metadata['prepared_by'] = 'Brian Abbott, Zack Reeves, Cade Mohrhardt'
+    metadata['version'] = '1.1'
 
-metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
-metadata['raw_data_dir'] = ''
+    metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
+    metadata['raw_data_dir'] = ''
 
-metadata['data_group_title'] = 'Variable stars'
-metadata['data_group_desc'] = 'Variable stars in the Milky Way mapped by Gaia'
-metadata['data_group_desc_long'] = 'RR Lyrae stars are excellent tracers of the oldest stars (ages greater than or equal to 9/10 Gyr) and standard candles for measuring the distance to stellar systems that are mainly composed of an old stellar population. The Gaia Third Data Release (DR3) publishes a catalogue of full sky RR Lyrae stars observed during the initial 34 months of science operations. They were processed through the Specific Object Study (SOS) pipeline, which was developed to validate and characterise Cepheids and RR Lyrae stars (SOS Cep&RRL) observed by Gaia.'
-metadata['fileroot'] = 'variable_stars'
+    metadata['data_group_title'] = 'Variable stars'
+    metadata['data_group_desc'] = 'Variable stars in the Milky Way mapped by Gaia'
+    metadata['data_group_desc_long'] = 'RR Lyrae stars are excellent tracers of the oldest stars (ages greater than or equal to 9/10 Gyr) and standard candles for measuring the distance to stellar systems that are mainly composed of an old stellar population. The Gaia Third Data Release (DR3) publishes a catalogue of full sky RR Lyrae stars observed during the initial 34 months of science operations. They were processed through the Specific Object Study (SOS) pipeline, which was developed to validate and characterise Cepheids and RR Lyrae stars (SOS Cep&RRL) observed by Gaia.'
+    metadata['fileroot'] = 'variable_stars'
+
+    metadata['OS_identifier'] = metadata['sub_project']
+    metadata['OS_gui_name'] = metadata['data_group_title']
+    metadata['OS_gui_path'] = '/Milky Way/Stars'
+    metadata['OS_gui_description'] = metadata['data_group_desc_long']
+
+    return metadata
+
+
+metadata = generate_metadata()
 
 file_functions.generate_license_file(metadata)
-file_functions.generate_asset_file(metadata)
+#file_functions.generate_asset_file(metadata)
 
-#query cepheid table
 
-#log in to Gaia Server - Can change to different credentials file for a different user
-#query runs in less than a minute
-#file is small, 15021 objects
-Gaia.login(credentials_file='../common/gaia_credentials.txt')
 
-#Query Gaia DR3 **we can add more params later, maybe get metallicity, periods, etc
+if READ_LOCAL_CATALOG == False:
+    #query cepheid table
 
-job = Gaia.launch_job_async("select a.source_id, "
-                            "b.ra, b.dec, b.pmra, b.pmdec, b.parallax, b.parallax_error, b.phot_g_mean_mag, b.bp_g, b.radial_velocity, b.radial_velocity_error, b.grvs_mag, b.rv_template_teff, "
-                            "bj.r_med_geo, bj.r_hi_geo, bj.r_lo_geo, bj.r_med_photogeo, bj.r_hi_photogeo, bj.r_lo_photogeo "
-                            "from gaiadr3.vari_cepheid a inner join gaiadr3.gaia_source b on a.source_id = b.source_id "
-                            "left join external.gaiaedr3_distance bj on a.source_id = bj.source_id",
-                            dump_to_file=False)
+    #log in to Gaia Server - Can change to different credentials file for a different user
+    #query runs in less than a minute
+    #file is small, 15021 objects
+    Gaia.login(credentials_file='../common/gaia_credentials.txt')
 
-#Put the resulting table into a Table
-cepheids = job.get_results()
-cepheids['variable_type'] = [1]*len(cepheids)
+    #Query Gaia DR3 **we can add more params later, maybe get metallicity, periods, etc
 
-Gaia.remove_jobs(job.jobid)
+    job = Gaia.launch_job_async("select a.source_id, "
+                                "b.ra, b.dec, b.pmra, b.pmdec, b.parallax, b.parallax_error, b.phot_g_mean_mag, b.bp_g, b.radial_velocity, b.radial_velocity_error, b.grvs_mag, b.rv_template_teff, "
+                                "bj.r_med_geo, bj.r_hi_geo, bj.r_lo_geo, bj.r_med_photogeo, bj.r_hi_photogeo, bj.r_lo_photogeo "
+                                "from gaiadr3.vari_cepheid a inner join gaiadr3.gaia_source b on a.source_id = b.source_id "
+                                "left join external.gaiaedr3_distance bj on a.source_id = bj.source_id",
+                                dump_to_file=False)
 
-Gaia.logout()
+    #Put the resulting table into a Table
+    cepheids = job.get_results()
+    cepheids['variable_type'] = [1]*len(cepheids)
 
-#query RR Lyrae table
+    Gaia.remove_jobs(job.jobid)
 
-#log in to Gaia Server - Can change to different credentials file for a different user
-#query runs in a few minutes
-#file is smallish, 271779 objects
-Gaia.login(credentials_file='../common/gaia_credentials.txt')
+    Gaia.logout()
 
-#Query Gaia DR3 **we can add more params later, maybe get metallicity, periods, etc
+    #query RR Lyrae table
 
-job = Gaia.launch_job_async("select a.source_id, "
-                            "b.ra, b.dec, b.pmra, b.pmdec, b.parallax, b.parallax_error, b.phot_g_mean_mag, b.bp_g, b.radial_velocity, b.radial_velocity_error, b.grvs_mag, b.rv_template_teff, "
-                            "bj.r_med_geo, bj.r_hi_geo, bj.r_lo_geo, bj.r_med_photogeo, bj.r_hi_photogeo, bj.r_lo_photogeo "
-                            "from gaiadr3.vari_rrlyrae a inner join gaiadr3.gaia_source b on a.source_id = b.source_id "
-                            "left join external.gaiaedr3_distance bj on a.source_id = bj.source_id",
-                            dump_to_file=False)
+    #log in to Gaia Server - Can change to different credentials file for a different user
+    #query runs in a few minutes
+    #file is smallish, 271779 objects
+    Gaia.login(credentials_file='../common/gaia_credentials.txt')
 
-#Put the resulting table into a Table
-rrls = job.get_results()
-rrls['variable_type'] = [2]*len(rrls)
+    #Query Gaia DR3 **we can add more params later, maybe get metallicity, periods, etc
 
-Gaia.remove_jobs(job.jobid)
+    job = Gaia.launch_job_async("select a.source_id, "
+                                "b.ra, b.dec, b.pmra, b.pmdec, b.parallax, b.parallax_error, b.phot_g_mean_mag, b.bp_g, b.radial_velocity, b.radial_velocity_error, b.grvs_mag, b.rv_template_teff, "
+                                "bj.r_med_geo, bj.r_hi_geo, bj.r_lo_geo, bj.r_med_photogeo, bj.r_hi_photogeo, bj.r_lo_photogeo "
+                                "from gaiadr3.vari_rrlyrae a inner join gaiadr3.gaia_source b on a.source_id = b.source_id "
+                                "left join external.gaiaedr3_distance bj on a.source_id = bj.source_id",
+                                dump_to_file=False)
 
-Gaia.logout()
+    #Put the resulting table into a Table
+    rrls = job.get_results()
+    rrls['variable_type'] = [2]*len(rrls)
 
-rrls
+    Gaia.remove_jobs(job.jobid)
 
-data = vstack([cepheids, rrls])
+    Gaia.logout()
 
-# Uncomment to download the combined query results to a csv
-#download = data.to_pandas()
-#download.to_csv('raw_data/variablestarsqueries.csv', index=False)
+
+    data = vstack([cepheids, rrls])
+
+    #Download the combined query results to a csv
+    download = data.to_pandas()
+    download.to_csv('raw_data/variablestarsqueries.csv', index=False)
+
+if READ_LOCAL_CATALOG == True:
+    data = pd.read_csv('raw_data/variablestarsqueries.csv')
+    data = Table.from_pandas(data)
+
+
+
+#setting units and metadata for important columns
+data['ra'] = data.MaskedColumn(data=data['ra'], 
+                                      unit=u.deg,
+                                      meta = collections.OrderedDict([('ucd', 'pos.eq.ra')]),
+                                      format='{:.6f}', 
+                                      description='Right Ascension')
+
+data['dec'] = data.MaskedColumn(data=data['dec'], 
+                                      unit=u.deg,
+                                      meta = collections.OrderedDict([('ucd', 'pos.eq.dec')]),
+                                      format='{:.6f}', 
+                                      description='Declination')
+
+data['pmra'] = data.MaskedColumn(data=data['pmra'], 
+                                       unit=u.mas/u.yr,
+                                       meta = collections.OrderedDict([('ucd', 'pos.eq.ra')]),
+                                       format='{:.6f}', 
+                                       description='Proper Motion of RA')
+
+data['pmdec'] = data.MaskedColumn(data=data['pmdec'], 
+                                       unit=u.mas/u.yr,
+                                       meta = collections.OrderedDict([('ucd', 'pos.eq.dec')]),
+                                       format='{:.6f}', 
+                                       description='Proper Motion of DEC')
+
+data['radial_velocity'] = data.MaskedColumn(data=data['radial_velocity'], 
+                                       unit=u.km/u.s,
+                                       meta = collections.OrderedDict([('ucd', 'pos.eq.dec')]),
+                                       format='{:.6f}', 
+                                       description='Radial Velocity')
+
 
 data['variable_type'] = data.Column(data['variable_type'],
                             meta=collections.OrderedDict([('ucd', 'meta.vari_type')]),
                             description='Type of Variable Star: 1 indicates Cepheid, 2 indicates RR Lyrae')
-data
 
 #setting dcalc based on r_med_geo (if>500pc and photogeo exists, we choose photogeo and set dcalc to 1, else geo and dcalc to 2)
 data['dcalc'] = [1 if((not(np.ma.is_masked(data['r_med_photogeo'][i])))and(data['r_med_geo'][i]>500)) else 2 for i in range(len(data))]
@@ -141,6 +194,7 @@ data.remove_rows([i for i in range(len(data)) if np.ma.is_masked(data['bj_distan
 
 #calculating cartesian coordinates
 calculations.get_cartesian(data, ra='ra', dec='dec', pmra='pmra', pmde='pmdec', radial_velocity='radial_velocity', frame='icrs')
+
 
 #calculating absolute magnitudes
 #calculate absolute V mag based on apparent magnitude and distance
@@ -174,65 +228,67 @@ data['color'] = data.MaskedColumn(data=data['bp_g'],
                              description='Gaia BP-G color')
 plt.hist(data['color'], bins=250)
 
-#2D Visualization
-fig, ax = plt.subplots(1, 2)
 
-#XY Plane
-ax[0].scatter(data['x'], data['y'])
-ax[0].set_title('XY Plane')
+# #2D Visualization
+# fig, ax = plt.subplots(1, 2)
 
-#XZ Plane
-ax[1].scatter(data['x'], data['z'])
-ax[1].set_title('XZ Plane')
+# #XY Plane
+# ax[0].scatter(data['x'], data['y'])
+# ax[0].set_title('XY Plane')
 
-#set good spacing
-fig.tight_layout()
-fig.set_size_inches(10, 4, forward=True)
-plt.show
+# #XZ Plane
+# ax[1].scatter(data['x'], data['z'])
+# ax[1].set_title('XZ Plane')
 
-#2D Visualization
-fig, ax = plt.subplots(1, 2)
+# #set good spacing
+# fig.tight_layout()
+# fig.set_size_inches(10, 4, forward=True)
+# plt.show
 
-#XY Plane
-ax[0].scatter(data[data['variable_type']=='RRLyrae']['x'], data[data['variable_type']=='RRLyrae']['y'], color='red')
-ax[0].scatter(data[data['variable_type']=='cepheid']['x'], data[data['variable_type']=='cepheid']['y'], color='blue')
+# #2D Visualization
+# fig, ax = plt.subplots(1, 2)
 
-ax[0].set_title('XY Plane')
+# #XY Plane
+# ax[0].scatter(data[data['variable_type']=='RRLyrae']['x'], data[data['variable_type']=='RRLyrae']['y'], color='red')
+# ax[0].scatter(data[data['variable_type']=='cepheid']['x'], data[data['variable_type']=='cepheid']['y'], color='blue')
 
-#XZ Plane
-ax[1].scatter(data[data['variable_type']=='RRLyrae']['x'], data[data['variable_type']=='RRLyrae']['z'], color='red')
-ax[1].scatter(data[data['variable_type']=='cepheid']['x'], data[data['variable_type']=='cepheid']['z'], color='blue')
-ax[1].set_title('XZ Plane')
+# ax[0].set_title('XY Plane')
 
-#set good spacing
-fig.tight_layout()
-fig.set_size_inches(10, 4, forward=True)
-plt.show
+# #XZ Plane
+# ax[1].scatter(data[data['variable_type']=='RRLyrae']['x'], data[data['variable_type']=='RRLyrae']['z'], color='red')
+# ax[1].scatter(data[data['variable_type']=='cepheid']['x'], data[data['variable_type']=='cepheid']['z'], color='blue')
+# ax[1].set_title('XZ Plane')
 
-#2D Density Visualization
-fig, ax = plt.subplots(1, 2)
+# #set good spacing
+# fig.tight_layout()
+# fig.set_size_inches(10, 4, forward=True)
+# plt.show
 
-#XY Plane
-ax[0].hist2d(data['x'], data['y'], 
-           bins = 200,  
-           norm = colors.LogNorm(),  
-           cmap = "RdYlGn_r",) 
-ax[0].set_title('XY Plane')
+# #2D Density Visualization
+# fig, ax = plt.subplots(1, 2)
 
-#XZ Plane
-ax[1].hist2d(data['x'], data['z'], 
-           bins = 200,  
-           norm = colors.LogNorm(),  
-           cmap = "RdYlGn_r",) 
-ax[1].set_title('XZ Plane')
+# #XY Plane
+# ax[0].hist2d(data['x'], data['y'], 
+#            bins = 200,  
+#            norm = colors.LogNorm(),  
+#            cmap = "RdYlGn_r",) 
+# ax[0].set_title('XY Plane')
 
-#set good spacing
-fig.tight_layout()
-fig.set_size_inches(10, 4, forward=True)
-#plt.show
+# #XZ Plane
+# ax[1].hist2d(data['x'], data['z'], 
+#            bins = 200,  
+#            norm = colors.LogNorm(),  
+#            cmap = "RdYlGn_r",) 
+# ax[1].set_title('XZ Plane')
+
+# #set good spacing
+# fig.tight_layout()
+# fig.set_size_inches(10, 4, forward=True)
+# #plt.show
+
 
 #construct a speck comment column
-data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['source_id']], 
+data['speck_label'] = data.Column(data=['#  '+str(name) for name in data['source_id']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
                                   description='Gaia DR3 Source ID')
 
@@ -246,15 +302,75 @@ data['texnum'] = data.Column(data=[1]*len(data),
 
 #Getting the column metadata
 columns = file_functions.get_metadata(data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'variable_type', 'speck_label'])
-columns
+
+
+
+if GENERATE_SPECK:
+    # Print the speck file using the to_speck function in file_functions
+    file_functions.to_speck(metadata, Table.to_pandas(data), columns)
+
 
 # Print the csv file using the to_csv function in file_functions
 file_functions.to_csv(metadata, Table.to_pandas(data), columns)
 
-# Print the speck file using the to_speck function in file_functions
-file_functions.to_speck(metadata, Table.to_pandas(data), columns)
-
 # Print the label file using the to_label function in file_functions
 file_functions.to_label(metadata, Table.to_pandas(data))
 
-data[data['source_id']==4685634433183799680]
+
+df = Table.to_pandas(data)
+file_functions.generate_plot_pdf(df[columns['name']], metadata)
+
+
+
+def asset_main():
+    """Generate the asset file for stars"""
+
+    metadata = generate_metadata()
+    datainfo = {
+        "renderable": "RenderableStars",
+        "filename": metadata['fileroot'],
+		"asset_dir": "",
+        "local_modules": True,
+        "data": {
+            "File": metadata['fileroot']+".speck",
+            "Name": metadata['data_group_title']+" Speck Files",
+            "Identifier": "gaia_"+metadata['fileroot']+"_speck",
+            "Version": 6
+            },
+        "Texture": {
+            "Glare": "halo.png",
+            "Core": "glare.png",
+            "Name": "Stars Textures",
+            "Identifier": "stars_textures",
+            "Version": 1
+            },
+        "ColorMap":{
+            "ColorMap": "colorbv.cmap",
+            "OtherDataColorMap": "viridis.cmap",
+            "Name": "Stars Color Table",
+            "Identifier": "stars_colormap",
+            "Version": 3
+            },
+        "Identifier": metadata['fileroot'],
+        "Bv_column": "color",
+        "Luminance_column": "lum",
+        "AbsoluteMagnitude_column": "absmag",
+        "ApparentMagnitude_column": "appmag",
+        "Vx_column": "u",
+        "Vy_column": "v",
+        "Vz_column": "w",
+        "Speed_column": "speed",
+        "GUI": {
+            "Name": metadata['OS_gui_name'],
+            "Path": metadata['OS_gui_path'],
+            "Description": metadata['OS_gui_description']
+            },
+        "meta_name": metadata['sub_project'],
+		"author": metadata['prepared_by']
+    }
+    asset_creation.write_asset(datainfo)
+
+
+if __name__ == "__main__" and GENERATE_ASSET_FILE:
+    asset_main()
+    print("Asset file for "+metadata['data_group_title']+" generated successfully.")

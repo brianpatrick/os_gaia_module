@@ -1,15 +1,16 @@
 # PROCESS THE GAIA DR3 RADIAL VELOCITY CATALOG:
 # https://gea.esac.esa.int/archive/
-#
-#
-# ZACK REEVES
-# CREATED: 2024
-# CADE MOHRHARDT
-# UPDATED: 2025
-#
-# VERSIONS:
+
+# Zack Reeves
+# Created: 2024
+# Edited by Cade Mohrhardt: 2026
+
+# Versions:
 #  1.1  MAR 2024 CREATE JUPYTER NOTEBOOK
-#  Python 3.12.12 OCT 2025
+#  1.02  MAY 2026 MODERNIZE CODE TO MATCH THE DIGITAL UNIVERSE
+
+#  Python 3.12.12
+
 
 # **STEPS TO RUN THIS CODE**
 
@@ -36,75 +37,90 @@ import numpy as np
 import sys
 import os
 import collections
-
 import astropy.units as u
 import astropy.coordinates
 from astropy.table import Table
 from astropy.io import ascii
 from astropy.io import fits
-
 from astroquery.gaia import Gaia
-
-sys.path.insert(0, '..')
-from common import file_functions, calculations, gaia_functions
-
 from matplotlib import pyplot as plt, colors
 
+sys.path.insert(0, '..')
+from common import file_functions, calculations, gaia_functions, asset_creation
+
+
+GENERATE_SPECK = True
+GENERATE_ASSET_FILE = True
+READ_LOCAL_CATALOG = True
+
+
 # Define the metadata for the data set. 
-metadata = {}
+def generate_metadata():
+    metadata = {}
 
-metadata['project'] = 'Digital Universe Atlas Gaia Subsets'
-metadata['sub_project'] = 'Gaia DR3 Radial Velocities'
+    metadata['project'] = 'Digital Universe Atlas Gaia Subsets'
+    metadata['sub_project'] = 'Gaia DR3 Radial Velocities'
 
-metadata['catalog'] = 'Gaia Data Release 3: Properties and validation of the radial velocities (Katz et al., 2023)'
-metadata['catalog_author'] = 'Katz et al.'
-metadata['catalog_year'] = '2023'
-metadata['prepared_by'] = 'Zack Reeves (AMNH), Cade Mohrhardt (AMNH)'
-metadata['version'] = '1.1'
+    metadata['catalog'] = 'Gaia Data Release 3: Properties and validation of the radial velocities (Katz et al., 2023)'
+    metadata['catalog_author'] = 'Katz et al.'
+    metadata['catalog_year'] = '2023'
+    metadata['prepared_by'] = 'Zack Reeves (AMNH), Cade Mohrhardt (AMNH)'
+    metadata['version'] = '1.1'
 
-metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
-metadata['raw_data_dir'] = ''
+    metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
+    metadata['raw_data_dir'] = ''
 
-metadata['data_group_title'] = 'RadialVelocityStars'
-metadata['data_group_desc'] = 'Gaia DR3 Radial Velocity'
-metadata['data_group_desc_long'] = 'Gaia DR3 Radial Velocity' #need to expand
+    metadata['data_group_title'] = 'Radial Velocity Stars'
+    metadata['data_group_desc'] = 'Gaia DR3 Radial Velocity'
+    metadata['data_group_desc_long'] = 'Gaia DR3 Stars with Radial Velocity'
+    metadata['fileroot'] = 'gdr3rv'
 
-metadata['fileroot'] = 'gdr3rv'
+    metadata['OS_identifier'] = metadata['sub_project']
+    metadata['OS_gui_name'] = metadata['data_group_title']
+    metadata['OS_gui_path'] = '/Milky Way/Stars'
+    metadata['OS_gui_description'] = metadata['data_group_desc_long']
 
-file_functions.generate_asset_file(metadata)
+    return metadata
+
+
+metadata = generate_metadata()
+
 file_functions.generate_license_file(metadata)
+#file_functions.generate_asset_file(metadata)
+
+
 
 #query the catalogue from Gaia
 #https://gea.esac.esa.int/archive/
 #The query pulls the source id, positional data, velocity data as well as teff and magnitude for correction purposes
 #corrective data included in the query was informed by https://www.aanda.org/articles/aa/full_html/2023/06/aa44220-22/aa44220-22.html#S14
-print("Which query would you like to run? type '1' or '2' for the queries, or '3' for a downloaded file")
-querytype = int(input())
+# if READ_LOCAL_CATALOG == False:
+#     #QUERY #1 - 33 million stars
 
-if querytype == 1:
-    #QUERY #1 - 33 million stars
+#     #log in to Gaia Server - Can change to different credentials file for a different user
+#     #query runs in a little over an hour
+#     #file is 3.2 gigabytes, 33,653,049 objects
+#     Gaia.login(credentials_file='../common/gaia_credentials.txt')
 
-    #log in to Gaia Server - Can change to different credentials file for a different user
-    #query runs in a little over an hour
-    #file is 3.2 gigabytes, 33,653,049 objects
-    Gaia.login(credentials_file='../common/gaia_credentials.txt')
+#     #Query Gaia DR3 source for parallaxes
+#     job = Gaia.launch_job_async("select a.source_id, a.ra, a.dec, a.pmra, a.pmdec, a.parallax, a.parallax_error, a.phot_g_mean_mag, a.bp_g, a.radial_velocity, a.radial_velocity_error, a.grvs_mag, a.rv_template_teff, "
+#                                 "bj.r_med_geo, bj.r_hi_geo, bj.r_lo_geo, bj.r_med_photogeo, bj.r_hi_photogeo, bj.r_lo_photogeo "
+#                                 "from gaiadr3.gaia_source a left join external.gaiaedr3_distance bj on a.source_id = bj.source_id "
+#                                 "where a.radial_velocity is not null and a.phot_g_mean_mag > 0 and parallax > 0",
+#                                 dump_to_file=False)
 
-    #Query Gaia DR3 source for parallaxes
-    job = Gaia.launch_job_async("select a.source_id, a.ra, a.dec, a.pmra, a.pmdec, a.parallax, a.parallax_error, a.phot_g_mean_mag, a.bp_g, a.radial_velocity, a.radial_velocity_error, a.grvs_mag, a.rv_template_teff, "
-                                "bj.r_med_geo, bj.r_hi_geo, bj.r_lo_geo, bj.r_med_photogeo, bj.r_hi_photogeo, bj.r_lo_photogeo "
-                                "from gaiadr3.gaia_source a left join external.gaiaedr3_distance bj on a.source_id = bj.source_id "
-                                "where a.radial_velocity is not null and a.phot_g_mean_mag > 0 and parallax > 0",
-                                dump_to_file=False)
+#     #Put the resulting table into a Table
+#     data = job.get_results()
 
-    #Put the resulting table into a Table
-    data = job.get_results()
-        
-    #Gaia.remove_jobs(job.jobid) # UNCOMMENT THIS LINE IF YOU WANT TO PURELY READ THE DATA FROM NOTEBOOK CODE - otherwise remember to delete the job from the gaia archive to not clog your memory
+#     # Uncomment to download the query results to a csv
+#     #download = data.to_pandas()
+#     #download.to_csv('raw_data/dr3rvquery.csv', index=False)
+    
+#     Gaia.remove_jobs(job.jobid)
 
-    Gaia.logout()
+#     Gaia.logout()
 
-
-elif querytype == 2:
+if READ_LOCAL_CATALOG == False:
     #QUERY #2 - 29 million stars
 
     #log in to Gaia Server - Can change to different credentials file for a different user
@@ -122,20 +138,53 @@ elif querytype == 2:
     #Put the resulting table into a Table
     data = job.get_results()
         
+    #Download the query results to a csv
+    download = data.to_pandas()
+    download.to_csv('raw_data/dr3rvquery.csv', index=False)
+    
     Gaia.remove_jobs(job.jobid)
 
     Gaia.logout()
 
-elif querytype == 3:
-    #uncomment this if you are using downloaded data, keep it commented if you are trying to run from the query
-    data = Table.read('1763156354433O-result.vot.gz')
+if READ_LOCAL_CATALOG == True:
+    data = pd.read_csv('raw_data/dr3rvquery.csv')
+    data = Table.from_pandas(data)    
 
-print("data read")
-data
+
+
+#setting units and metadata for important columns
+data['ra'] = data.MaskedColumn(data=data['ra'], 
+                                      unit=u.deg,
+                                      meta = collections.OrderedDict([('ucd', 'pos.eq.ra')]),
+                                      format='{:.6f}', 
+                                      description='Right Ascension')
+
+data['dec'] = data.MaskedColumn(data=data['dec'], 
+                                      unit=u.deg,
+                                      meta = collections.OrderedDict([('ucd', 'pos.eq.dec')]),
+                                      format='{:.6f}', 
+                                      description='Declination')
+
+data['pmra'] = data.MaskedColumn(data=data['pmra'], 
+                                       unit=u.mas/u.yr,
+                                       meta = collections.OrderedDict([('ucd', 'pos.eq.ra')]),
+                                       format='{:.6f}', 
+                                       description='Proper Motion of RA')
+
+data['pmdec'] = data.MaskedColumn(data=data['pmdec'], 
+                                       unit=u.mas/u.yr,
+                                       meta = collections.OrderedDict([('ucd', 'pos.eq.dec')]),
+                                       format='{:.6f}', 
+                                       description='Proper Motion of DEC')
+
+data['radial_velocity'] = data.MaskedColumn(data=data['radial_velocity'], 
+                                       unit=u.km/u.s,
+                                       meta = collections.OrderedDict([('ucd', 'pos.eq.dec')]),
+                                       format='{:.6f}', 
+                                       description='Radial Velocity')
+
 
 gaia_functions.set_bj_distance(data)
-
-data
 
 #calculating distance in light years and parsecs
 calculations.get_distance(data, dist='bj_distance', use='distance')
@@ -148,8 +197,6 @@ gaia_functions.get_magnitudes(data)
 gaia_functions.get_luminosity(data)
 
 gaia_functions.get_bp_g_color(data) #may want to change to bp_rp
-
-print("progress report on functions")
 
 # data check on the G mag
 x = data['phot_g_mean_mag']
@@ -176,72 +223,132 @@ data['corrected_radial_velocity'].unit=u.km/u.s
 #calculating cartesian coordinates
 calculations.get_cartesian(data, ra='ra', dec='dec', pmra='pmra', pmde='pmdec', radial_velocity='corrected_radial_velocity', frame='icrs')
 
-print("progress report 1")
 
-data
+# #2D Visualization
+# fig, ax = plt.subplots(1, 2)
 
-#2D Visualization
-fig, ax = plt.subplots(1, 2)
+# #XY Plane
+# ax[0].scatter(data['x'], data['y'])
+# ax[0].set_title('XY Plane')
 
-#XY Plane
-ax[0].scatter(data['x'], data['y'])
-ax[0].set_title('XY Plane')
+# #XZ Plane
+# ax[1].scatter(data['x'], data['z'])
+# ax[1].set_title('XZ Plane')
 
-#XZ Plane
-ax[1].scatter(data['x'], data['z'])
-ax[1].set_title('XZ Plane')
+# #set good spacing
+# fig.tight_layout()
+# fig.set_size_inches(10, 4, forward=True)
+# plt.show
 
-#set good spacing
-fig.tight_layout()
-fig.set_size_inches(10, 4, forward=True)
-plt.show
+# #2D Density Visualization
+# fig, ax = plt.subplots(1, 2)
 
-#2D Density Visualization
-fig, ax = plt.subplots(1, 2)
 
-print("progress report 2")
+# #XY Plane
+# ax[0].hist2d(data['x'], data['y'], 
+#            bins = 200,  
+#            norm = colors.LogNorm(),  
+#            cmap = "RdYlGn_r",) 
+# ax[0].set_title('XY Plane')
 
-#XY Plane
-ax[0].hist2d(data['x'], data['y'], 
-           bins = 200,  
-           norm = colors.LogNorm(),  
-           cmap = "RdYlGn_r",) 
-ax[0].set_title('XY Plane')
+# #XZ Plane
+# ax[1].hist2d(data['x'], data['z'], 
+#            bins = 200,  
+#            norm = colors.LogNorm(),  
+#            cmap = "RdYlGn_r",) 
+# ax[1].set_title('XZ Plane')
 
-#XZ Plane
-ax[1].hist2d(data['x'], data['z'], 
-           bins = 200,  
-           norm = colors.LogNorm(),  
-           cmap = "RdYlGn_r",) 
-ax[1].set_title('XZ Plane')
+# #set good spacing
+# fig.tight_layout()
+# fig.set_size_inches(10, 4, forward=True)
+# #plt.show
 
-#set good spacing
-fig.tight_layout()
-fig.set_size_inches(10, 4, forward=True)
-#plt.show
 
 #construct a speck comment column
-data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['SOURCE_ID']], 
+data['speck_label'] = data.Column(data=['#  '+str(name) for name in data['source_id']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
                                   description='Gaia DR3 Source ID')
 
 #construct a label column
-data['label'] = ['GaiaDR3_'+ str(source) for source in data['SOURCE_ID']]  #leaving for now in case we want to add other labels
+data['label'] = ['GaiaDR3_'+ str(source) for source in data['source_id']]  #leaving for now in case we want to add other labels
 
 #setting texture number column
 data['texnum'] = data.Column(data=[1]*len(data), 
                                   meta=collections.OrderedDict([('ucd', 'meta.texnum')]),
                                   description='Texture Number')
 
+
 #Getting the column metadata
 columns = file_functions.get_metadata(data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'speck_label'])
-columns
+
+
+
+if GENERATE_SPECK:
+    # Print the speck file using the to_speck function in file_functions
+    file_functions.to_speck(metadata, Table.to_pandas(data), columns)
+
 
 # Print the csv file using the to_csv function in file_functions
 file_functions.to_csv(metadata, Table.to_pandas(data), columns)
 
-# Print the speck file using the to_speck function in file_functions
-file_functions.to_speck(metadata, Table.to_pandas(data), columns)
-
 # Print the label file using the to_label function in file_functions
 file_functions.to_label(metadata, Table.to_pandas(data))
+
+
+df = Table.to_pandas(data)
+file_functions.generate_plot_pdf(df[columns['name']], metadata)
+
+
+
+def asset_main():
+    """Generate the asset file for stars"""
+
+    metadata = generate_metadata()
+    datainfo = {
+        "renderable": "RenderableStars",
+        "filename": metadata['fileroot'],
+		"asset_dir": "",
+        "local_modules": True,
+        "data": {
+            "File": metadata['fileroot']+".speck",
+            "Name": metadata['data_group_title']+" Speck Files",
+            "Identifier": "gaia_"+metadata['fileroot']+"_speck",
+            "Version": 6
+            },
+        "Texture": {
+            "Glare": "halo.png",
+            "Core": "glare.png",
+            "Name": "Stars Textures",
+            "Identifier": "stars_textures",
+            "Version": 1
+            },
+        "ColorMap":{
+            "ColorMap": "colorbv.cmap",
+            "OtherDataColorMap": "viridis.cmap",
+            "Name": "Stars Color Table",
+            "Identifier": "stars_colormap",
+            "Version": 3
+            },
+        "Identifier": metadata['fileroot'],
+        "Bv_column": "color",
+        "Luminance_column": "lum",
+        "AbsoluteMagnitude_column": "absmag",
+        "ApparentMagnitude_column": "appmag",
+        "Vx_column": "u",
+        "Vy_column": "v",
+        "Vz_column": "w",
+        "Speed_column": "speed",
+        "GUI": {
+            "Name": metadata['OS_gui_name'],
+            "Path": metadata['OS_gui_path'],
+            "Description": metadata['OS_gui_description']
+            },
+        "meta_name": metadata['sub_project'],
+		"author": metadata['prepared_by']
+    }
+    asset_creation.write_asset(datainfo)
+
+
+if __name__ == "__main__" and GENERATE_ASSET_FILE:
+    asset_main()
+    print("Asset file for "+metadata['data_group_title']+" generated successfully.")

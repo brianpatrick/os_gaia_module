@@ -1,40 +1,39 @@
 # PROCESS THE GLOBULAR CLUSTER STARS CATAOLOG:
 # https://zenodo.org/records/4891252
-#
-#
-# ZACK REEVES
-# CREATED: 2024
-# CADE MOHRHARDT
-# UPDATED: 2025
-#
-# VERSIONS:
+
+# Zack Reeves
+# Created: 2024
+# Edited by Cade Mohrhardt: 2026
+
+# Versions:
 #  1.1  JAN 2024 CREATE JUPYTER NOTEBOOK
-#  Python 3.12.12 OCT 2025
+#  1.02  MAY 2026 MODERNIZE CODE TO MATCH THE DIGITAL UNIVERSE
+
+#  Python 3.12.12
 
 import pandas as pd
 import numpy as np
 import sys
 import os
 import collections
-
 from tqdm import tqdm
-
 from astropy.io import ascii
 import astropy.units as u
 import astropy.coordinates
 from astropy.table import unique, vstack, Table, join
-
 from astroquery.gaia import Gaia
+from matplotlib import pyplot as plt, colors
 
 sys.path.insert(0, '..')
 from common import file_functions, calculations, gaia_functions, get_bailer_jones, asset_creation
 
-from matplotlib import pyplot as plt, colors
 
-PRINT_CENSUS = True
+GENERATE_SPECK = True
 GENERATE_ASSET_FILE = True
+READ_LOCAL_CATALOG = True
 
-# Define the metadata for the data set. #FIX LATER
+
+# Define the metadata for the data set.
 def generate_metadata():
     metadata = {}
 
@@ -57,12 +56,21 @@ def generate_metadata():
     metadata['data_group_desc'] = 'Stars in the Milky Way identified to be members of globular clusters'
     metadata['data_group_desc_long'] = ''
     metadata['fileroot'] = 'globstars'
+
+    metadata['OS_identifier'] = metadata['sub_project']
+    metadata['OS_gui_name'] = metadata['data_group_title']
+    metadata['OS_gui_path'] = '/Milky Way/Stars'
+    metadata['OS_gui_description'] = metadata['data_group_desc_long']
+
     return metadata
 
 metadata = generate_metadata()
 
+
 file_functions.generate_license_file(metadata)
 #file_functions.generate_asset_file(metadata)
+
+
 
 #download data from https://zenodo.org/records/4891252
 
@@ -71,6 +79,7 @@ file_functions.generate_license_file(metadata)
 #data are downloaded in a .zip file.  Once extracted, the stars associated with each cluster are stored in folders
 #named by the cluster.  We combine each of these folders into one table with an appended column describing the
 #cluster
+
 
 #iterate through files in catalogues directory and stack
 
@@ -92,7 +101,8 @@ for file in tqdm(os.listdir(directory)):
 
 #combining tables in tables array
 data = vstack(tables)
-data
+
+
 
 data['source_id'] = [int(i) for i in data['source_id']]
 
@@ -112,14 +122,13 @@ data.remove_rows(np.where(data['memberprob']<0.5)[0])
 
 distances = get_bailer_jones.get_bj_distances(data, get_motion=True)
 
-
 data = join(data, distances, keys='source_id', join_type='left')
-data
 
 
 data['cluster_name'] = table.Column(data=data['cluster_name'],
                                          meta = collections.OrderedDict([('ucd', 'meta.name.cluster')]),
                                          description='Name of associated Globular Cluster')
+
 
 #fixing parallax units
 data['plx'].unit=u.mas
@@ -128,61 +137,64 @@ data['plx'].unit=u.mas
 data['ra'].unit=u.deg
 data['dec'].unit=u.deg
 
+
 #calculating distance in light years and parsecs
 calculations.get_distance(data, dist='bj_distance', use='distance')
 
 #calculating cartesian coordinates
 calculations.get_cartesian(data, ra='ra', dec='dec', pmra='pmra', pmde='pmdec', frame='icrs')
 
-#2D Visualization
-fig, ax = plt.subplots(1, 2)
 
-#XY Plane
-ax[0].scatter(data['x'], data['y'])
-ax[0].set_title('XY Plane')
+# #2D Visualization
+# fig, ax = plt.subplots(1, 2)
 
-#XZ Plane
-ax[1].scatter(data['x'], data['z'])
-ax[1].set_title('XZ Plane')
+# #XY Plane
+# ax[0].scatter(data['x'], data['y'])
+# ax[0].set_title('XY Plane')
 
-#set good spacing
-fig.tight_layout()
-fig.set_size_inches(10, 4, forward=True)
-plt.show
+# #XZ Plane
+# ax[1].scatter(data['x'], data['z'])
+# ax[1].set_title('XZ Plane')
 
-#2D Density Visualization
-fig, ax = plt.subplots(1, 2)
+# #set good spacing
+# fig.tight_layout()
+# fig.set_size_inches(10, 4, forward=True)
+# plt.show
 
-#XY Plane
-ax[0].hist2d(data['x'], data['y'], 
-           bins = 200,  
-           norm = colors.LogNorm(),  
-           cmap = "RdYlGn_r",) 
-ax[0].set_title('XY Plane')
+# #2D Density Visualization
+# fig, ax = plt.subplots(1, 2)
 
-#XZ Plane
-ax[1].hist2d(data['x'], data['z'], 
-           bins = 200,  
-           norm = colors.LogNorm(),  
-           cmap = "RdYlGn_r",) 
-ax[1].set_title('XZ Plane')
+# #XY Plane
+# ax[0].hist2d(data['x'], data['y'], 
+#            bins = 200,  
+#            norm = colors.LogNorm(),  
+#            cmap = "RdYlGn_r",) 
+# ax[0].set_title('XY Plane')
 
-#set good spacing
-fig.tight_layout()
-fig.set_size_inches(10, 4, forward=True)
-#plt.show
+# #XZ Plane
+# ax[1].hist2d(data['x'], data['z'], 
+#            bins = 200,  
+#            norm = colors.LogNorm(),  
+#            cmap = "RdYlGn_r",) 
+# ax[1].set_title('XZ Plane')
+
+# #set good spacing
+# fig.tight_layout()
+# fig.set_size_inches(10, 4, forward=True)
+# #plt.show
+
 
 gaia_functions.get_magnitudes(data, gmag='g_mag')
+
 gaia_functions.get_luminosity(data)
+
 gaia_functions.get_bp_g_color(data, color='bp_rp')
 
+
 #construct a speck comment column
-data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['source_id']], 
+data['speck_label'] = data.Column(data=['#  '+str(name) for name in data['source_id']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
                                   description='Gaia EDR3 Source ID')
-
-data['speck_label'] = str(data['cluster_name'])+str(data['speck_label'])
-data.remove_column('cluster_name')
 
 #construct a label column
 data['label'] = ['GaiaEDR3_'+ str(source) for source in data['source_id']]  #leaving for now in case we want to add other labels
@@ -192,32 +204,31 @@ data['texnum'] = data.Column(data=[1]*len(data),
                                   meta=collections.OrderedDict([('ucd', 'meta.texnum')]),
                                   description='Texture Number')
 
-#Getting the column metadata
-columns = file_functions.get_metadata(data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'speck_label']) #add 'cluster_name' if it cannot be combined with 'speck_label'
-columns
 
-# Print the csv file using the to_speck function in file_functions
-file_functions.to_csv(metadata, Table.to_pandas(data), columns)
+# #Getting the column metadata
+# columns = file_functions.get_metadata(data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'speck_label']) #add 'cluster_name' if it cannot be combined with 'speck_label'
+# columns
 
-# Print the speck file using the to_speck function in file_functions
-file_functions.to_speck(metadata, Table.to_pandas(data), columns)
+# # Print the csv file using the to_speck function in file_functions
+# file_functions.to_csv(metadata, Table.to_pandas(data), columns)
 
-# Print the label file using the to_label function in file_functions
-file_functions.to_label(metadata, Table.to_pandas(data))
+# # Print the speck file using the to_speck function in file_functions
+# file_functions.to_speck(metadata, Table.to_pandas(data), columns)
+
+# # Print the label file using the to_label function in file_functions
+# file_functions.to_label(metadata, Table.to_pandas(data))
 
 cluster_names = unique(data, keys='cluster_name')['cluster_name']
 
-#for i in cluster_names:
-#    print(i)
-
 #the distances given for the stars in globular clusters are inaccurate due to local motions within the clusters
 #we disect the dataset back into its constituent clusters to artificially constrain the stars in each cluster to the hypothetical cluster radius
+
 
 from astroquery.vizier import Vizier
 # #reading in the catalogue
 catalog = Vizier(catalog='J/MNRAS/505/5978', columns=['**'], row_limit=-1).query_constraints()
 clusters = catalog[0]
-clusters
+
 
 # The cluster names associated with our parallax data don't exactly match the ones we have, so the following table is a custom correlation table
 #the creation of a csv just to turn around and read that csv as a table is leftover code that could certainly be streamlined
@@ -225,15 +236,13 @@ cluster_names_col = cluster_names.data
 clustable = Table.to_pandas(clusters)
 clustable = clustable.assign(cluster_names_col=cluster_names_col)
 clustable = clustable.rename(columns={'cluster_names_col': 'bonus_column'})
-clustable.to_csv("globclusters.csv", index=False, encoding='utf-8')
-clusters = Table.read('globclusters.csv')
+clusters = Table.from_pandas(clustable)
 
 def angle_radius(rscale_theta, distance):
     return distance*np.tan(rscale_theta)
 
 
 import scipy.stats as stats
-
 
 cluster_dataframes=[]
 for i in tqdm(range(len(cluster_names))):
@@ -275,137 +284,117 @@ for i in tqdm(range(len(cluster_names))):
 adjusted_data = vstack(cluster_dataframes)
 
 
-#2D Visualization
-fig, ax = plt.subplots(1, 2)
+# #2D Visualization
+# fig, ax = plt.subplots(1, 2)
 
-#XY Plane
-ax[0].scatter(adjusted_data['x'], adjusted_data['y'])
-ax[0].set_title('XY Plane')
+# #XY Plane
+# ax[0].scatter(adjusted_data['x'], adjusted_data['y'])
+# ax[0].set_title('XY Plane')
 
-#XZ Plane
-ax[1].scatter(adjusted_data['x'], adjusted_data['z'])
-ax[1].set_title('XZ Plane')
+# #XZ Plane
+# ax[1].scatter(adjusted_data['x'], adjusted_data['z'])
+# ax[1].set_title('XZ Plane')
 
-#set good spacing
-fig.tight_layout()
-fig.set_size_inches(10, 4, forward=True)
-plt.show
+# #set good spacing
+# fig.tight_layout()
+# fig.set_size_inches(10, 4, forward=True)
+# plt.show
 
 
-#2D Density Visualization
-fig, ax = plt.subplots(1, 2)
+# #2D Density Visualization
+# fig, ax = plt.subplots(1, 2)
 
-#XY Plane
-ax[0].hist2d(adjusted_data['x'], adjusted_data['y'], 
-           bins = 200,  
-           norm = colors.LogNorm(),  
-           cmap = "RdYlGn_r",) 
-ax[0].set_title('XY Plane')
+# #XY Plane
+# ax[0].hist2d(adjusted_data['x'], adjusted_data['y'], 
+#            bins = 200,  
+#            norm = colors.LogNorm(),  
+#            cmap = "RdYlGn_r",) 
+# ax[0].set_title('XY Plane')
 
-#XZ Plane
-ax[1].hist2d(adjusted_data['x'], adjusted_data['z'], 
-           bins = 200,  
-           norm = colors.LogNorm(),  
-           cmap = "RdYlGn_r",) 
-ax[1].set_title('XZ Plane')
+# #XZ Plane
+# ax[1].hist2d(adjusted_data['x'], adjusted_data['z'], 
+#            bins = 200,  
+#            norm = colors.LogNorm(),  
+#            cmap = "RdYlGn_r",) 
+# ax[1].set_title('XZ Plane')
 
-#set good spacing
-fig.tight_layout()
-fig.set_size_inches(10, 4, forward=True)
-#plt.show
+# #set good spacing
+# fig.tight_layout()
+# fig.set_size_inches(10, 4, forward=True)
+# #plt.show
+
 
 #Getting the column metadata
 columns = file_functions.get_metadata(adjusted_data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'speck_label']) #add 'cluster_name' if it cannot be combined with 'speck_label'
-columns
 
-adjusted_data = adjusted_data
 
-# Print the csv file using the to_speck function in file_functions
-file_functions.to_csv(metadata, Table.to_pandas(adjusted_data), columns)
 
-# Print the speck file using the to_speck function in file_functions
-file_functions.to_speck(metadata, Table.to_pandas(adjusted_data), columns)
+if GENERATE_SPECK:
+    # Print the speck file using the to_speck function in file_functions
+    file_functions.to_speck(metadata, Table.to_pandas(data), columns)
+
+
+# Print the csv file using the to_csv function in file_functions
+file_functions.to_csv(metadata, Table.to_pandas(data), columns)
 
 # Print the label file using the to_label function in file_functions
-file_functions.to_label(metadata, Table.to_pandas(adjusted_data))
+file_functions.to_label(metadata, Table.to_pandas(data))
 
-max(adjusted_data['dist_pc'])
 
-adjusted_data[adjusted_data['dist_pc']>300000]
+df = Table.to_pandas(data)
+file_functions.generate_plot_pdf(df[columns['name']], metadata)
 
-clusters[clusters['bonus_column']=='NGC_2419']
 
 
 def asset_main():
-    """Generate the asset file for Gaia Globular Clusters."""
+    """Generate the asset file for stars"""
 
+    metadata = generate_metadata()
     datainfo = {
-        # Core script requirements
-        "renderable": "RenderablePolygonCloud",
+        "renderable": "RenderableStars",
         "filename": metadata['fileroot'],
-        "Identifier": "GaiaGlobularClusters",
+		"asset_dir": "",
         "local_modules": True,
-        "asset_dir": "",
-        "Enabled": "true",
-        "name": "Gaia Globular Clusters",
         "data": {
-            "File": "globstars.speck",
-            "Name": "Globular Clusters Speck Files",
-            "Identifier": "gaia_globclusters_speck",
-            "Version": 3
+            "File": metadata['fileroot']+".speck",
+            "Name": metadata['data_group_title']+" Speck Files",
+            "Identifier": "gaia_"+metadata['fileroot']+"_speck",
+            "Version": 6
             },
         "Texture": {
-            "File": "stars_textures"
-        },
-        
-        "local colormaps": """asset.resource({
-    Name = "Stars Color Table",
-    Type = "HttpSynchronization",
-    Identifier = "stars_colormap",
-    Version = 3
-})""",
-
-        "local textures": """asset.resource({
-    Name = "Stars Textures",
-    Type = "HttpSynchronization",
-    Identifier = "stars_textures",
-    Version = 1
-})""",
-
-        # Renderable Parameters
-        "opacity": 0.9,
-        "PolygonSides": "12",
-        "Unit": "pc",
-        "FixedColor": "0.80, 0.0, 0.50",
-        
-        # Label Settings
-        "labels": {
-            "file": "globstars.label",
-            "color": "{ 0.0, 0.36, 0.14 }",
-            "size": 15.5,
-            "min_max": "{ 4, 30 }"
-        },
-        
-        # Size Settings
-        "ScaleExponent": "15.7",
-        "MaxSize": "23.0",
-        "enable_max_size": "true",
-
-        # GUI & Meta
+            "Glare": "halo.png",
+            "Core": "glare.png",
+            "Name": "Stars Textures",
+            "Identifier": "stars_textures",
+            "Version": 1
+            },
+        "ColorMap":{
+            "ColorMap": "colorbv.cmap",
+            "OtherDataColorMap": "viridis.cmap",
+            "Name": "Stars Color Table",
+            "Identifier": "stars_colormap",
+            "Version": 3
+            },
+        "Identifier": metadata['fileroot'],
+        "Bv_column": "color",
+        "Luminance_column": "lum",
+        "AbsoluteMagnitude_column": "absmag",
+        "ApparentMagnitude_column": "appmag",
+        "Vx_column": "u",
+        "Vy_column": "v",
+        "Vz_column": "w",
+        "Speed_column": "speed",
         "GUI": {
-        "Path": "/Milky Way/Star Clusters",
-        "Name": "Gaia Globular Clusters",
-        "Description": "This is a large catalog containing 'Milky Way globular clusters' using Gaia DR3 data.",
-        "url": "https://www.amnh.org/research/hayden-planetarium/digital-universe",
-        "license": "AMNH Gaia"
-        },
+            "Name": metadata['OS_gui_name'],
+            "Path": metadata['OS_gui_path'],
+            "Description": metadata['OS_gui_description']
+            },
         "meta_name": metadata['sub_project'],
 		"author": metadata['prepared_by']
     }
-
-    # Generate the file using your internal utility
     asset_creation.write_asset(datainfo)
 
-if __name__ == "__main__":
+
+if __name__ == "__main__" and GENERATE_ASSET_FILE:
     asset_main()
-    print("globular clusters asset generated successfully.")
+    print("Asset file for "+metadata['data_group_title']+" generated successfully.")

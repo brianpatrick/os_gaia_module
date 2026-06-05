@@ -1,39 +1,38 @@
 # PROCESS THE GAIA CATALOG OF STARS in DWARF GALAXIES:
 # https://www.aanda.org/articles/aa/full_html/2022/01/aa41528-21/aa41528-21.html
-# 
-#
-#
-# ZACK REEVES
-# CREATED: 2024
-# CADE MOHRHARDT
-# UPDATED: 2025
-#
-# VERSIONS:
+
+# Zack Reeves
+# Created: 2024
+# Edited by Cade Mohrhardt: 2026
+
+# Versions:
 #  1.1  MAY 2024 CREATE JUPYTER NOTEBOOK
-#  Python 3.12.12 OCT 2025
+#  1.02  MAY 2026 MODERNIZE CODE TO MATCH THE DIGITAL UNIVERSE
+
+#  Python 3.12.12
 
 import pandas as pd
 import numpy as np
 import sys
 import os
 import collections
-
 import astropy.units as u
 import astropy.coordinates
 from astropy.table import Table, join, vstack
-
 from astroquery.gaia import Gaia
 from astroquery.vizier import Vizier
+from matplotlib import pyplot as plt, colors
 
 sys.path.insert(0, '..')
 from common import file_functions, calculations, asset_creation
 
-from matplotlib import pyplot as plt, colors
 
-PRINT_CENSUS = True
+GENERATE_SPECK = True
 GENERATE_ASSET_FILE = True
+READ_LOCAL_CATALOG = True
 
-# Define the metadata for the data set. #FIX LATER
+
+# Define the metadata for the data set. 
 def generate_metadata():  
     metadata = {}
 
@@ -52,71 +51,108 @@ def generate_metadata():
     metadata['dir'] = metadata['sub_project'].replace(' ', '_').lower()
     metadata['raw_data_dir'] = ''
 
-    metadata['data_group_title'] = 'dGal'
+    metadata['data_group_title'] = 'Gaia Stars in Dwarf Galaxies'
     metadata['data_group_desc'] = 'Nearby stars in the Milky Way mapped by Gaia'
     metadata['data_group_desc_long'] = 'Have you ever wondered what is out there in space? Now, thanks to Gaia EDR3, the solar neighbourhood has been mapped with great precision out to 100 pc (326 light years)'
     metadata['fileroot'] = 'dGal'
 
+    metadata['OS_identifier'] = metadata['sub_project']
+    metadata['OS_gui_name'] = metadata['data_group_title']
+    metadata['OS_gui_path'] = '/Milky Way/Stars'
+    metadata['OS_gui_description'] = metadata['data_group_desc_long']
+
     return metadata
 
+
 metadata = generate_metadata()
+
 file_functions.generate_license_file(metadata)
-file_functions.generate_asset_file(metadata)
-
-#reading in the catalogue
-catalog = Vizier(catalog='J/A+A/657/A54', columns=['**'], row_limit=-1).query_constraints()
-catalog[0]
+#file_functions.generate_asset_file(metadata)
 
 
-data=catalog[0]
-Table.to_pandas(data)['Galaxy'].unique()
+
+if READ_LOCAL_CATALOG == False:
+    #reading in the catalogue
+    catalog = Vizier(catalog='J/A+A/657/A54', columns=['**'], row_limit=-1).query_constraints()
+
+    data=catalog[0]
+    Table.to_pandas(data)['Galaxy'].unique()
+
+    len(data[data['Pmemb']>0.5])
+
+    data.remove_rows(np.where(data['Pmemb']<0.5)[0])
 
 
-catalog
+    #Query Gaia ESA ADQL server using Gaia EDR3 IDs to obtain proper motion to calculate uvw as well as photometric data
+
+    #log in to Gaia Server - Can change to different credentials file for a different user
+    Gaia.login(credentials_file='../common/gaia_credentials.txt')
+
+    #grab username from file
+    file = open('../common/gaia_credentials.txt', 'r')
+    username = file.readline().strip()
+
+    #Upload table (table name will be forced to lowercase)
+    job = Gaia.upload_table(upload_resource=data[['GaiaEDR3']], table_name="d_gal", format="csv")
+
+    #Query Gaia DR3 source for parallaxes
+    #Potentially want Bailer Jones distances pending figuring out the parallax error issue
+    job = Gaia.launch_job_async("select a.GaiaEDR3, "
+                                "bj.r_med_geo, bj.r_hi_geo, bj.r_lo_geo, bj.r_med_photogeo, bj.r_hi_photogeo, bj.r_lo_photogeo, "
+                                "c.pmra, c.pmdec, c.radial_velocity, c.phot_g_mean_mag, c.bp_g, c.teff_gspphot "
+                                "from user_"+username+".d_gal a inner join external.gaiaedr3_distance bj on a.GaiaEDR3 = bj.source_id "
+                                "inner join gaiadr3.gaia_source c on a.GaiaEDR3 = c.source_id",
+                                dump_to_file=False)
+
+    #put the resulting table into a dataframe and drop the unnecessary index column
+    data = join(data, job.get_results(), keys='GaiaEDR3', join_type='left')
+    # data.remove_column('xhip_main_oid')
+    #Deleting table and job from Gaia ESA server so we don't clog the memory
+    Gaia.delete_user_table(table_name="user_"+username+".d_gal")
+    Gaia.remove_jobs(job.jobid)
+
+    # Uncomment to download the query results to a csv
+    download = data.to_pandas()
+    download.to_csv('raw_data/dGalquery.csv', index=False)
+
+    Gaia.logout()
+
+if READ_LOCAL_CATALOG == True:
+    data = pd.read_csv('raw_data/dGalquery.csv')
+    data = Table.from_pandas(data)
 
 
-len(data[data['Pmemb']>0.5])
 
+#setting units and metadata for important columns
+data['RA_ICRS'] = data.MaskedColumn(data=data['RA_ICRS'], 
+                                      unit=u.deg,
+                                      meta = collections.OrderedDict([('ucd', 'pos.eq.ra')]),
+                                      format='{:.6f}', 
+                                      description='Right Ascension')
 
-data.remove_rows(np.where(data['Pmemb']<0.5)[0])
+data['DE_ICRS'] = data.MaskedColumn(data=data['DE_ICRS'], 
+                                      unit=u.deg,
+                                      meta = collections.OrderedDict([('ucd', 'pos.eq.dec')]),
+                                      format='{:.6f}', 
+                                      description='Declination')
 
+data['pmra'] = data.MaskedColumn(data=data['pmra'], 
+                                       unit=u.mas/u.yr,
+                                       meta = collections.OrderedDict([('ucd', 'pos.eq.ra')]),
+                                       format='{:.6f}', 
+                                       description='Proper Motion of RA')
 
-#Query Gaia ESA ADQL server using Gaia EDR3 IDs to obtain proper motion to calculate uvw as well as photometric data
+data['pmdec'] = data.MaskedColumn(data=data['pmdec'], 
+                                       unit=u.mas/u.yr,
+                                       meta = collections.OrderedDict([('ucd', 'pos.eq.dec')]),
+                                       format='{:.6f}', 
+                                       description='Proper Motion of DEC')
 
-#log in to Gaia Server - Can change to different credentials file for a different user
-Gaia.login(credentials_file='../common/gaia_credentials.txt')
-
-#grab username from file
-file = open('../common/gaia_credentials.txt', 'r')
-username = file.readline().strip()
-
-#Upload table (table name will be forced to lowercase)
-job = Gaia.upload_table(upload_resource=data[['GaiaEDR3']], table_name="d_gal", format="csv")
-
-#Query Gaia DR3 source for parallaxes
-#Potentially want Bailer Jones distances pending figuring out the parallax error issue
-job = Gaia.launch_job_async("select a.GaiaEDR3, "
-                            "bj.r_med_geo, bj.r_hi_geo, bj.r_lo_geo, bj.r_med_photogeo, bj.r_hi_photogeo, bj.r_lo_photogeo, "
-                            "c.pmra, c.pmdec, c.radial_velocity, c.phot_g_mean_mag, c.bp_g, c.teff_gspphot "
-                            "from user_"+username+".d_gal a inner join external.gaiaedr3_distance bj on a.GaiaEDR3 = bj.source_id "
-                            "inner join gaiadr3.gaia_source c on a.GaiaEDR3 = c.source_id",
-                            dump_to_file=False)
-
-#put the resulting table into a dataframe and drop the unnecessary index column
-data = join(data, job.get_results(), keys='GaiaEDR3', join_type='left')
-# data.remove_column('xhip_main_oid')
-#Deleting table and job from Gaia ESA server so we don't clog the memory
-Gaia.delete_user_table(table_name="user_"+username+".d_gal")
-Gaia.remove_jobs(job.jobid)
-
-Gaia.logout()
-
-# Uncomment to download the query results to a csv
-#download = data.to_pandas()
-#download.to_csv('raw_data/dGalquery.csv', index=False)
-
-
-data
+data['radial_velocity'] = data.MaskedColumn(data=data['radial_velocity'], 
+                                       unit=u.km/u.s,
+                                       meta = collections.OrderedDict([('ucd', 'pos.eq.dec')]),
+                                       format='{:.6f}', 
+                                       description='Radial Velocity')
 
 
 #setting dcalc based on r_med_geo (if>500pc and photogeo exists, we choose photogeo and set dcalc to 1, else geo and dcalc to 2)
@@ -138,9 +174,9 @@ data['e_bj_dist'] = [((data['r_hi_photogeo'][i]-data['r_lo_photogeo'][i])/2)*u.p
 #calculating distance in light years and parsecs
 calculations.get_distance(data, dist='bj_distance', use='distance')
 
-
 #calculating cartesian coordinates
 calculations.get_cartesian(data, ra='RA_ICRS', dec='DE_ICRS', pmra='pmra', pmde='pmdec', radial_velocity='radial_velocity', frame='icrs')
+
 
 #calculating absolute magnitudes
 #calculate absolute V mag based on apparent magnitude and distance
@@ -176,50 +212,52 @@ data['color'] = data.MaskedColumn(data=data['bp_g'],
                              meta=collections.OrderedDict([('ucd', 'phys.color')]),
                              format='{:.2f}',
                              description='Gaia BP-G color')
-plt.hist(data['color'], bins=250)
+
+# plt.hist(data['color'], bins=250)
 
 
-#2D Visualization
-fig, ax = plt.subplots(1, 2)
+# #2D Visualization
+# fig, ax = plt.subplots(1, 2)
 
-#XY Plane
-ax[0].scatter(data['x'], data['y'])
-ax[0].set_title('XY Plane')
+# #XY Plane
+# ax[0].scatter(data['x'], data['y'])
+# ax[0].set_title('XY Plane')
 
-#XZ Plane
-ax[1].scatter(data['x'], data['z'])
-ax[1].set_title('XZ Plane')
+# #XZ Plane
+# ax[1].scatter(data['x'], data['z'])
+# ax[1].set_title('XZ Plane')
 
-#set good spacing
-fig.tight_layout()
-fig.set_size_inches(10, 4, forward=True)
-plt.show
+# #set good spacing
+# fig.tight_layout()
+# fig.set_size_inches(10, 4, forward=True)
+# plt.show
 
 
-#2D Density Visualization
-fig, ax = plt.subplots(1, 2)
+# #2D Density Visualization
+# fig, ax = plt.subplots(1, 2)
 
-#XY Plane
-ax[0].hist2d(data['x'], data['y'], 
-           bins = 200,  
-           norm = colors.LogNorm(),  
-           cmap = "RdYlGn_r",) 
-ax[0].set_title('XY Plane')
+# #XY Plane
+# ax[0].hist2d(data['x'], data['y'], 
+#            bins = 200,  
+#            norm = colors.LogNorm(),  
+#            cmap = "RdYlGn_r",) 
+# ax[0].set_title('XY Plane')
 
-#XZ Plane
-ax[1].hist2d(data['x'], data['z'], 
-           bins = 200,  
-           norm = colors.LogNorm(),  
-           cmap = "RdYlGn_r",) 
-ax[1].set_title('XZ Plane')
+# #XZ Plane
+# ax[1].hist2d(data['x'], data['z'], 
+#            bins = 200,  
+#            norm = colors.LogNorm(),  
+#            cmap = "RdYlGn_r",) 
+# ax[1].set_title('XZ Plane')
 
-#set good spacing
-fig.tight_layout()
-fig.set_size_inches(10, 4, forward=True)
-plt.show
+# #set good spacing
+# fig.tight_layout()
+# fig.set_size_inches(10, 4, forward=True)
+# plt.show
+
 
 #construct a speck comment column
-data['speck_label'] = data.Column(data=['#__'+str(name) for name in data['GaiaEDR3']], 
+data['speck_label'] = data.Column(data=['#  '+str(name) for name in data['GaiaEDR3']], 
                                   meta=collections.OrderedDict([('ucd', 'meta.id')]),
                                   description='Gaia EDR3 Source ID')
 
@@ -231,16 +269,78 @@ data['texnum'] = data.Column(data=[1]*len(data),
                                   meta=collections.OrderedDict([('ucd', 'meta.texnum')]),
                                   description='Texture Number')
 
+
 #Getting the column metadata
 columns = file_functions.get_metadata(data, columns=['x', 'y', 'z', 'color', 'lum', 'absmag', 'appmag', 'texnum', 'dist_ly', 'dcalc', 'u', 'v', 'w', 'speed', 'speck_label'])
-columns
+
+
+
+if GENERATE_SPECK:
+    # Print the speck file using the to_speck function in file_functions
+    file_functions.to_speck(metadata, Table.to_pandas(data), columns)
+
 
 # Print the csv file using the to_csv function in file_functions
 file_functions.to_csv(metadata, Table.to_pandas(data), columns)
 
-# Print the speck file using the to_speck function in file_functions
-file_functions.to_speck(metadata, Table.to_pandas(data), columns)
-
 # Print the label file using the to_label function in file_functions
 file_functions.to_label(metadata, Table.to_pandas(data))
 
+
+df = Table.to_pandas(data)
+file_functions.generate_plot_pdf(df[columns['name']], metadata)
+
+
+
+def asset_main():
+    """Generate the asset file for stars"""
+
+    metadata = generate_metadata()
+    datainfo = {
+        "renderable": "RenderableStars",
+        "filename": metadata['fileroot'],
+		"asset_dir": "",
+        "local_modules": True,
+        "data": {
+            "File": metadata['fileroot']+".speck",
+            "Name": metadata['data_group_title']+" Speck Files",
+            "Identifier": "gaia_"+metadata['fileroot']+"_speck",
+            "Version": 6
+            },
+        "Texture": {
+            "Glare": "halo.png",
+            "Core": "glare.png",
+            "Name": "Stars Textures",
+            "Identifier": "stars_textures",
+            "Version": 1
+            },
+        "ColorMap":{
+            "ColorMap": "colorbv.cmap",
+            "OtherDataColorMap": "viridis.cmap",
+            "Name": "Stars Color Table",
+            "Identifier": "stars_colormap",
+            "Version": 3
+            },
+        "Identifier": metadata['fileroot'],
+        "Bv_column": "color",
+        "Luminance_column": "lum",
+        "AbsoluteMagnitude_column": "absmag",
+        "ApparentMagnitude_column": "appmag",
+        "Vx_column": "u",
+        "Vy_column": "v",
+        "Vz_column": "w",
+        "Speed_column": "speed",
+        "GUI": {
+            "Name": metadata['OS_gui_name'],
+            "Path": metadata['OS_gui_path'],
+            "Description": metadata['OS_gui_description']
+            },
+        "meta_name": metadata['sub_project'],
+		"author": metadata['prepared_by']
+    }
+    asset_creation.write_asset(datainfo)
+
+
+if __name__ == "__main__" and GENERATE_ASSET_FILE:
+    asset_main()
+    print("Asset file for "+metadata['data_group_title']+" generated successfully.")
